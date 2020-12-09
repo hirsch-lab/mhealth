@@ -1,0 +1,10 @@
+# This file may be used to create an environment using:
+# $ conda create --name <env> --file <this file>
+# platform: osx-64
+
+pandas>=1.1.5
+matplotlib>=3.3.3
+numpy>=1.19.4
+natsort>=7.0.1
+seaborn>=0.11.0
+
