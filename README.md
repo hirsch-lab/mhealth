@@ -1,5 +1,5 @@
 # mhealth
-Data analysis and visualization for health data from wearable devices
+Mobile health: data analysis and visualization for health data from wearable devices
 
 ## Python version
 3.8 
