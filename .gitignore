@@ -133,3 +133,10 @@ dmypy.json
 .idea/*
 /venv/
 *.png
+
+#data prediction
+*.ipynb_checkpoints/*
+*.h5
+*.json
+src/data_prediction/model_lstm_ukbb_v7.json
+*.pyc
