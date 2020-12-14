@@ -18,7 +18,6 @@ class ImoveLabelLoaderTest(unittest.TestCase):
                          'duration has not correct timedelta format')
 
     def test_load_labels_all(self):
-        dir_name = '/Users/sues/Documents/wearables/imove/labels'
         dir_name = '../resources/imove/labels'
 
         for filename in os.listdir(dir_name):
@@ -29,7 +28,6 @@ class ImoveLabelLoaderTest(unittest.TestCase):
 
             df = self.label_loader.load_labels(dir_name, filename)
 
-            #self.assertEqual((21, 9), df.shape, 'df shape not matching')
             self.assertEqual('datetime64[ns]', df['start_date'].dtypes,
                              'start_date has not correct datetime format')
             self.assertEqual('timedelta64[ns]', df['duration'].dtypes,

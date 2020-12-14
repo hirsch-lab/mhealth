@@ -22,15 +22,9 @@ class ImoveLabelLoader:
         header = df.iloc[0]
         df = df[1:]
         df.columns = header
-        df['start_date'] = pd.to_datetime(df.Date.astype(str)+' '+df.Start.astype(str))
+        df['start_date'] = pd.to_datetime(df.Date.astype(str)+' '+df.Start.astype(str)).dt.tz_localize('Europe/Zurich')
         df['duration'] = pd.to_timedelta(df['Time'])
         df['end_date'] = df['start_date'] + df['duration']
-
-        # TODO: convert to same time zone as input data
-        #if tz_to_zurich:
-        #    df['Date'] = pd.to_datetime(df['Date']).dt.tz_convert('Europe/Zurich')
-        #else:
-        #    df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_convert('UTC')
 
         return df
 
@@ -61,24 +55,26 @@ class ImoveLabelLoader:
                 df_l = self.loader.load_everion_patient_data(data_dir, filename_l, ';')
 
                 df_l = df_l.set_index(['timestamp'])
+                df_l.sort_index()
                 df_l['mobility_index'] = ''
 
                 df1.apply(lambda row: self.add_label(row, df_l), axis=1)
+                df2.apply(lambda row: self.add_label(row, df_l), axis=1)
+                df3.apply(lambda row: self.add_label(row, df_l), axis=1)
 
-                tmp = 1
 
         print("num files: ", len(files_sorted))
 
     def add_label(self, label_row, df):
-        start_time = label_row['start_date']
-        end_time = label_row['end_date']
-        label = label_row['Task']
-        #mask = df['mobility_index'].between_time(start_time, end_time)
-        #mask = (df > start_time) & (df <= end_time)
+        mask = df.loc[label_row['start_date']:label_row['end_date']]
 
-        df[mask] = label
+        #TODO: continue here
+        if not mask.empty:
+            print(
+                'start_time=' + str(label_row['start_date']) + ', end_time=' + str(label_row['end_date']) + ', label=' +
+                str(label_row['Task']))
+            df[mask] = str(label_row['Task'])
 
-        tmp = 0
 
 
 
