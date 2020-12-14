@@ -178,6 +178,7 @@ class SanityChecker:
 
                 print("num files: ", len(files_sorted))
 
+
         def run_mixed_raw_vital(self, dir_name, id_range, in_file_suffix, out_file_name):
             csv_out_file = os.path.join(os.path.join(dir_name, os.pardir), out_file_name)
             if os.path.exists(csv_out_file):
@@ -310,6 +311,127 @@ class SanityChecker:
 
                 print("num files: ", len(files_sorted))
 
+
+        def run_imove(self, dir_name, id_range, in_file_suffix, out_file_name):
+            csv_out_file = os.path.join(os.path.join(dir_name, os.pardir), out_file_name)
+            if os.path.exists(csv_out_file):
+                os.remove(csv_out_file)
+
+            with open(csv_out_file, mode='a+') as out_file:
+                csv_writer = csv.writer(out_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                csv_writer.writerow(['Id', 'Available', '#ValidRows', '#ValidHours',
+                                     'timestamp_min', 'timestamp_max', 'hours',
+                                     'HR_mean', 'HR_std', 'HR_min', 'HR_max',
+                                     'A_mean', 'A_std', 'A_min', 'A_max',
+                                     'AC_mean', 'AC_std', 'AC_min', 'AC_max',
+                                     'HR_q_mean', 'HR_q_std', 'HR_q_min', 'HR_q_max',
+                                     'Spo2_q_mean', 'Spo2_q_std', 'Spo2_q_min', 'Spo2_q_max',
+                                     'AC_q_mean', 'AC_q_std', 'AC_q_min', 'AC_q_max'
+                                     ])
+
+                files_sorted = natsort.natsorted(os.listdir(dir_name))
+
+                for count in range(id_range):
+                    id = str(count + 1).zfill(3)
+
+                    found = False
+                    for i, filename in enumerate(files_sorted):
+                        if filename.__contains__(id):
+                            found = True
+
+                    if not (found):
+                        print("file not found with id: ", id)
+                        csv_writer.writerow([id, 'na', '', '', '', '', '', '', ''])
+
+                    else:
+                        filename = id + 'L' + in_file_suffix
+                        print("processing file: ", filename, " ...")
+                        file_path = os.path.join(dir_name, filename)
+                        if os.path.exists(file_path):
+                            self.write_row_one_side(csv_writer, dir_name, file_path, filename, id, 'L')
+
+                        filename = id + 'R' + in_file_suffix
+                        print("processing file: ", filename, " ...")
+                        file_path = os.path.join(dir_name, filename)
+                        if os.path.exists(file_path):
+                            self.write_row_one_side(csv_writer, dir_name, file_path, filename, id, 'R')
+
+                print("num files: ", len(files_sorted))
+
+        def write_row_one_side(self, csv_writer, dir_name, file_path, filename, id, side):
+            with open(file_path) as csv_file:
+                csv_reader = csv.reader(csv_file, delimiter=';')  # TODO: use df from below
+                line_count = 0
+                for row in csv_reader:
+                    if line_count == 0:
+                        line_count += 1
+                        continue;
+                    if int(row[0]) > 0:
+                        line_count += 1
+            if line_count > 0:
+                line_count -= 1  # -1 to subtract header row
+
+                valid_hours = line_count / 3600.0
+
+                df = self.loader.load_everion_patient_data(dir_name, filename, ';')
+
+                df['timestamp'] = pd.to_datetime(df['timestamp'])
+                ts_max = max(df['timestamp'])
+                ts_min = min(df['timestamp'])
+                hours = pd.Timedelta(ts_max - ts_min).seconds / 3600.0
+                hours += pd.Timedelta(ts_max - ts_min).days * 24
+
+                key = 'HR'
+                hr_mean = self.get_mean(df, key)
+                hr_min = self.get_min(df, key)
+                hr_max = self.get_max(df, key)
+                hr_std = self.get_std(df, key)
+
+                key = 'Activity'
+                a_mean = self.get_mean(df, key)
+                a_min = self.get_min(df, key)
+                a_max = self.get_max(df, key)
+                a_std = self.get_std(df, key)
+
+                key = 'Classification'
+                ac_mean = self.get_mean(df, key)
+                ac_min = self.get_min(df, key)
+                ac_max = self.get_max(df, key)
+                ac_std = self.get_std(df, key)
+
+                key = 'HRQ'
+                hr_q_mean = self.get_mean(df, key)
+                hr_q_min = self.get_min(df, key)
+                hr_q_max = self.get_max(df, key)
+                hr_q_std = self.get_std(df, key)
+
+                key = 'SPO2Q'
+                spo2_q_mean = self.get_mean(df, key)
+                spo2_q_min = self.get_min(df, key)
+                spo2_q_max = self.get_max(df, key)
+                spo2_q_std = self.get_std(df, key)
+
+                key = 'QualityClassification'
+                ac_q_mean = self.get_mean(df, key)
+                ac_q_min = self.get_min(df, key)
+                ac_q_max = self.get_max(df, key)
+                ac_q_std = self.get_std(df, key)
+
+            else:
+                ts_min = ts_max = valid_hours = hours = 0
+                hr_mean = hr_std = hr_min = hr_max = 0
+                a_mean = a_std = a_min = a_max = 0
+                ac_mean = ac_std = ac_min = ac_max = 0
+                hr_q_mean = hr_q_std = hr_q_min = hr_q_max = 0
+                spo2_q_mean = spo2_q_std = spo2_q_min = spo2_q_max = 0
+                ac_q_mean = ac_q_std = ac_q_min = ac_q_max = 0
+            csv_writer.writerow([id+side, "", line_count, valid_hours, ts_min, ts_max, hours,
+                                 hr_mean, hr_std, hr_min, hr_max,
+                                 a_mean, a_std, a_min, a_max,
+                                 ac_mean, ac_std, ac_min, ac_max,
+                                 hr_q_mean, hr_q_std, hr_q_min, hr_q_max,
+                                 spo2_q_mean, spo2_q_std, spo2_q_min, spo2_q_max,
+                                 ac_q_mean, ac_q_std, ac_q_min, ac_q_max])
 
         def get_std(self, df, key):
             return df[key].describe().loc[['std']][0]
