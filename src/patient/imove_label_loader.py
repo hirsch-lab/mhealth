@@ -12,8 +12,8 @@ class ImoveLabelLoader:
         print("loading xlsx file " + filename + " ...")
 
         path = os.path.join(dir_name, filename)
-        if os.path.getsize(path) <= 0:
-            print("file is empty")
+        if not os.path.exists(path):
+            print('file does not exist ' + path)
             return pd.DataFrame()
 
         df = pd.read_excel(path, engine='openpyxl')
@@ -29,7 +29,7 @@ class ImoveLabelLoader:
         return df
 
 
-    def merge_data_and_labels(self,data_dir, label_dir, id_range, in_file_suffix):
+    def merge_data_and_labels(self,data_dir, label_dir, out_dir,  id_range, in_file_suffix):
 
         files_sorted = natsort.natsorted(os.listdir(data_dir))
 
@@ -51,29 +51,44 @@ class ImoveLabelLoader:
                 df2 = self.load_labels(label_dir, self.get_label_filename(2, id))
                 df3 = self.load_labels(label_dir, self.get_label_filename(3, id))
 
-                filename_l = id + 'L' + in_file_suffix + '.csv'
-                df_l = self.loader.load_everion_patient_data(data_dir, filename_l, ';')
-
-                df_l = df_l.set_index(['timestamp'])
-                df_l.sort_index()
-                df_l['mobility_index'] = ''
-
-                df1.apply(lambda row: self.add_label(row, df_l), axis=1)
-                df2.apply(lambda row: self.add_label(row, df_l), axis=1)
-                df3.apply(lambda row: self.add_label(row, df_l), axis=1)
-
+                filename = id + 'L' + in_file_suffix + '.csv'
+                self.create_labels(data_dir, out_dir, df1, df2, df3, filename)
+                filename = id + 'R' + in_file_suffix + '.csv'
+                self.create_labels(data_dir, out_dir, df1, df2, df3, filename)
 
         print("num files: ", len(files_sorted))
 
-    def add_label(self, label_row, df):
-        mask = df.loc[label_row['start_date']:label_row['end_date']]
+    def create_labels(self, data_dir, out_dir, df1, df2, df3, filename):
+        df = self.loader.load_everion_patient_data(data_dir, filename, ';')
+        if not df.empty:
+            df = df.set_index(['timestamp'])
+            df.sort_index()
 
-        #TODO: continue here
-        if not mask.empty:
+            df['mobility_index'] = ''
+            df['de_morton'] = 0
+
+            if not df1.empty:
+                df1.apply(lambda row: self.add_label(row, df), axis=1)
+            if not df2.empty:
+                df2.apply(lambda row: self.add_label(row, df), axis=1)
+            if not df3.empty:
+                df3.apply(lambda row: self.add_label(row, df), axis=1)
+
+            df.to_csv(os.path.join(out_dir, filename))
+
+    def add_label(self, label_row, df):
+
+        tmp = label_row['start_date'] in df.index
+        tmp2 = label_row['end_date'] in df.index
+        # TODO: continue here
+        if label_row['start_date'] in df.index and label_row['end_date'] in df.index:
+            df['mobility_index'].loc[label_row['start_date']:label_row['end_date']] = str(label_row['Task'])
+            df['de_morton'].loc[label_row['start_date']:label_row['end_date']] = 1
+        else:
             print(
-                'start_time=' + str(label_row['start_date']) + ', end_time=' + str(label_row['end_date']) + ', label=' +
+                'dates out of data range. start_time=' + str(label_row['start_date']) + ', end_time=' + str(
+                    label_row['end_date']) + ', label=' +
                 str(label_row['Task']))
-            df[mask] = str(label_row['Task'])
 
 
 

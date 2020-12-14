@@ -2,6 +2,7 @@ import os
 import unittest
 
 from patient.imove_label_loader import ImoveLabelLoader
+from utils.file_helper import FileHelper
 
 
 class ImoveLabelLoaderTest(unittest.TestCase):
@@ -37,8 +38,11 @@ class ImoveLabelLoaderTest(unittest.TestCase):
     def test_merge_data_and_labels(self):
         label_dir = '../resources/imove/labels'
         data_dir = '../resources/imove/data'
+        out_dir = FileHelper.get_out_dir(data_dir, '_labeled')
 
-        self.label_loader.merge_data_and_labels(data_dir, label_dir, 1, '_storage-vital')
+        self.label_loader.merge_data_and_labels(data_dir, label_dir, out_dir, 1, '_storage-vital')
+
+        self.assertTrue(True)
 
         self.assertTrue(True)
 
