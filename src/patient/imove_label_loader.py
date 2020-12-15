@@ -29,12 +29,12 @@ class ImoveLabelLoader:
 
         return df
 
-    def merge_data_and_labels(self, data_dir, label_dir, out_dir, id_range, in_file_suffix):
+    def merge_data_and_labels(self, data_dir, label_dir, out_dir, start_range, end_range, in_file_suffix):
 
         files_sorted = natsort.natsorted(os.listdir(data_dir))
 
-        for count in range(id_range):
-            id = str(count + 1).zfill(3)
+        for count in range(start_range, end_range+1):
+            id = str(count).zfill(3)
 
             found = False
             for i, filename in enumerate(files_sorted):
@@ -61,9 +61,6 @@ class ImoveLabelLoader:
     def create_labels(self, data_dir, out_dir, df1, df2, df3, filename):
         df = self.loader.load_everion_patient_data(data_dir, filename, ';')
         if not df.empty:
-            #df = df.set_index(['timestamp'])
-            #df.sort_index()
-
             df['de_morton_label'] = ''
             df['de_morton'] = 0
 
@@ -81,12 +78,9 @@ class ImoveLabelLoader:
         end = label_row['end_date']
         label = label_row['Task']
 
-        for index, row in df.iterrows():
-            current = row['timestamp']
-            if current >= start and current <= end:
-                row['de_morton_label'] = label
-                row['de_morton'] = 1
-                df.iloc[index] = row
+        sel = (df.timestamp >= start) & (df.timestamp <= end)
+        df.loc[sel, 'de_morton_label'] = label
+        df.loc[sel, 'de_morton'] = 1
 
 
     def get_label_filename(self, day, id):
