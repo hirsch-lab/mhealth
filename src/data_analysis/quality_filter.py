@@ -48,7 +48,12 @@ class QualityFilter:
         self.filter_quality(df, min_quality, 'Classification', 'QualityClassification')
         self.filter_quality(df, min_quality, 'SPo2', 'SPO2Q')
 
-        self.filter_quality_range(df, min_quality, range(0,19), 'HRQ')
+
+        self.filter_quality_range(df, min_quality, range(0,1), 'HRQ')
+        self.filter_quality_range(df, min_quality, range(2,3), 'HRQ')
+        self.filter_quality_range(df, min_quality, range(4,8), 'HRQ')
+        self.filter_quality_range(df, min_quality, range(9, 19), 'HRQ')
+
         df.to_csv(csv_out_file, sep=';')
 
     def set_bad_quality_nan_range(self, df, min_quality, signal_name, range):
