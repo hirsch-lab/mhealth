@@ -178,7 +178,6 @@ class SanityChecker:
 
                 print("num files: ", len(files_sorted))
 
-
         def run_mixed_raw_vital(self, dir_name, id_range, in_file_suffix, out_file_name):
             csv_out_file = os.path.join(os.path.join(dir_name, os.pardir), out_file_name)
             if os.path.exists(csv_out_file):
@@ -310,7 +309,6 @@ class SanityChecker:
                                              ac_q_mean, ac_q_std, ac_q_min, ac_q_max])
 
                 print("num files: ", len(files_sorted))
-
 
         def run_imove(self, dir_name, id_range, in_file_suffix, out_file_name):
             csv_out_file = os.path.join(os.path.join(dir_name, os.pardir), out_file_name)

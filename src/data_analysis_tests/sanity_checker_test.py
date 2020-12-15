@@ -40,10 +40,10 @@ class SanityCheckerTest(unittest.TestCase):
         self.assertAlmostEqual(df[signal][1], value2, 8)
         self.assertAlmostEqual(df[signal][6], value3, 8)
 
-    #@unittest.SkipTest
+    @unittest.SkipTest
     def test_run_full(self):
-        dir_name = '/Users/sues/Documents/wearables/imove/cleaned2_quality_filtered2_50'
-        self.checker.run_imove(dir_name, 30, '_storage-vital.csv', 'quality-after.csv')
+        dir_name = ''
+        self.checker.run_vital(dir_name, 84, '.csv', '.csv')
         self.assertTrue(True)
 
 if __name__ == '__main__':

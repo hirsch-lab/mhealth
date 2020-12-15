@@ -48,7 +48,6 @@ class QualityFilter:
         self.filter_quality(df, min_quality, 'Classification', 'QualityClassification')
         self.filter_quality(df, min_quality, 'SPo2', 'SPO2Q')
 
-
         self.filter_quality_range(df, min_quality, range(0,1), 'HRQ')
         self.filter_quality_range(df, min_quality, range(2,3), 'HRQ')
         self.filter_quality_range(df, min_quality, range(4,8), 'HRQ')
