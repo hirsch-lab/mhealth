@@ -10,9 +10,11 @@ import numpy as np
 
 from utils.file_helper import FileHelper
 
+_MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../resources')
+
 
 class DataAggregatorTest(unittest.TestCase):
-    in_dir = '../resources/vital_signals/'
+    in_dir = f'{_MHEALTH_DATA}/vital_signals/'
 
     aggregator = DataAggregator()
     loader = PatientDataLoader()

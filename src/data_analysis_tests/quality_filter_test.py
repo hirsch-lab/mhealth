@@ -7,10 +7,12 @@ from data_analysis.quality_filter import QualityFilter
 from patient.patient_data_loader import PatientDataLoader
 from utils.file_helper import FileHelper
 
+_MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../resources')
+
 
 class QualityFilterTest(unittest.TestCase):
-        in_dir_vital = '../resources/vital_signals/'
-        in_dir_mixed_vital_raw = '../resources/mixed_vital_raw_signals/'
+        in_dir_vital = f'{_MHEALTH_DATA}/vital_signals/'
+        in_dir_mixed_vital_raw = f'{_MHEALTH_DATA}/mixed_vital_raw_signals/'
 
         filter = QualityFilter()
         quality = 50

@@ -7,9 +7,11 @@ from utils.everion_keys import EverionKeys
 from visualization.signal_plotter import SignalPlotter
 from utils.file_helper import FileHelper
 
+_MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../resources')
+
 
 class SignalPlotterTest(unittest.TestCase):
-        in_dir = '../resources/vital_signals/'
+        in_dir = f'{_MHEALTH_DATA}/vital_signals/'
         plotter = SignalPlotter()
         out_dir = FileHelper.get_out_dir(in_dir, '_per-signal')
 

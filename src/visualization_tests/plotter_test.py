@@ -9,9 +9,11 @@ from visualization.vis_properties import VisProperties
 from utils.everion_keys import EverionKeys
 from utils.file_helper import FileHelper
 
+_MHEALTH_DATA = os.getenv("MHEALTH_DATA", "../resources")
+
 
 class PlotterTest(unittest.TestCase):
-    in_dir = '../resources/vital_signals/'
+    in_dir = f'{_MHEALTH_DATA}/vital_signals/'
     plotter = Plotter()
     out_dir = FileHelper.get_out_dir(in_dir, '_plots')
 
@@ -51,7 +53,7 @@ class PlotterTest(unittest.TestCase):
         self.assertEqual(8, len(files))
 
     def test_plot_one_signal_mixed_vital_raw(self):
-        in_dir = '../resources/mixed_vital_raw_signals/'
+        in_dir = f'{_MHEALTH_DATA}/mixed_vital_raw_signals/'
         out_dir = FileHelper.get_out_dir(in_dir, '_plots')
 
         if os.path.exists(out_dir):
@@ -76,7 +78,7 @@ class PlotterTest(unittest.TestCase):
         self.assertEqual(24, len(files))
 
     def test_plot_all_signals_mixed(self):
-        in_dir = '../resources/mixed_vital_raw_signals/'
+        in_dir = f'{_MHEALTH_DATA}/mixed_vital_raw_signals/'
         out_dir = FileHelper.get_out_dir(in_dir, '_plots')
 
         if os.path.exists(out_dir):

@@ -8,10 +8,12 @@ from visualization.vis_properties import VisProperties
 from utils.everion_keys import EverionKeys
 from utils.file_helper import FileHelper
 
+_MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../resources')
+
 
 class BarChartsPlotterTest(unittest.TestCase):
-    in_dir_vital = '../resources/vital_signals/'
-    in_dir_mixed_raw_vital = '../resources/mixed_vital_raw_signals/'
+    in_dir_vital = f'{_MHEALTH_DATA}/vital_signals/'
+    in_dir_mixed_raw_vital = f'{_MHEALTH_DATA}/mixed_vital_raw_signals/'
 
     visualizer = BarChartsPlotter()
 
