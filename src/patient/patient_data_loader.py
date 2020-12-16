@@ -5,7 +5,7 @@ import pandas as pd
 
 class PatientDataLoader:
 
-    def load_everion_patient_data(self, dir_name, filename, csv_delimiter, tz_to_zurich=True):
+    def load_everion_patient_data(self, dir_name, filename, csv_delimiter, tz_to_zurich=True, **kwargs):
         print("loading everion data from file " + filename + " ...")
 
         csv_in_file = os.path.join(dir_name, filename)
@@ -13,7 +13,7 @@ class PatientDataLoader:
             print("csv file is empty")
             return pd.DataFrame()
 
-        df = pd.read_csv(csv_in_file, sep=csv_delimiter)
+        df = pd.read_csv(csv_in_file, sep=csv_delimiter, **kwargs)
 
         if tz_to_zurich:
             df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_convert('Europe/Zurich')
