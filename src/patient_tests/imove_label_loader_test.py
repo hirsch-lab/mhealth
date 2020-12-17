@@ -13,7 +13,7 @@ class ImoveLabelLoaderTest(unittest.TestCase):
         df = self.label_loader.load_labels(dir_name, '001-2.xlsx')
 
         self.assertEqual((21, 9), df.shape, 'df shape not matching')
-        self.assertEqual('datetime64[ns]', df['start_date'].dtypes,
+        self.assertEqual('datetime64[ns, Europe/Zurich]', df['start_date'].dtypes,
                          'start_date has not correct datetime format')
         self.assertEqual('timedelta64[ns]', df['duration'].dtypes,
                          'duration has not correct timedelta format')
@@ -29,7 +29,7 @@ class ImoveLabelLoaderTest(unittest.TestCase):
 
             df = self.label_loader.load_labels(dir_name, filename)
 
-            self.assertEqual('datetime64[ns]', df['start_date'].dtypes,
+            self.assertEqual('datetime64[ns, Europe/Zurich]', df['start_date'].dtypes,
                              'start_date has not correct datetime format')
             self.assertEqual('timedelta64[ns]', df['duration'].dtypes,
                              'duration has not correct timedelta format')
@@ -47,11 +47,11 @@ class ImoveLabelLoaderTest(unittest.TestCase):
 
     @unittest.SkipTest
     def test_merge_data_and_labels_all(self):
-        label_dir = ''
-        data_dir = ''
+        label_dir = '/Users/sues/Documents/wearables/imove/labels'
+        data_dir = '/Users/sues/Documents/wearables/imove/raw_cleaned'
         out_dir = FileHelper.get_out_dir(data_dir, '_labeled')
 
-        self.label_loader.merge_data_and_labels(data_dir, label_dir, out_dir, 1, 30, '_storage-vital')
+        self.label_loader.merge_data_and_labels(data_dir, label_dir, out_dir, 1, 30, '_storage-vital_raw')
 
         self.assertTrue(True)
 
