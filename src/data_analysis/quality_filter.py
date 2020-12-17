@@ -27,6 +27,7 @@ class QualityFilter:
         self.set_bad_quality_nan(df, min_quality, 'heart_rate_variability')
         self.set_bad_quality_nan(df, min_quality, 'respiration_rate')
 
+        # quality signals omitted to remember original quality
         self.set_bad_quality_nan_range(df, min_quality, 'heart_rate', range(0,18))
         self.set_bad_quality_nan_range(df, min_quality, 'heart_rate', range(20,22))
         self.set_bad_quality_nan_range(df, min_quality, 'heart_rate', range(27,29))
@@ -48,10 +49,14 @@ class QualityFilter:
         self.filter_quality(df, min_quality, 'Classification', 'QualityClassification')
         self.filter_quality(df, min_quality, 'SPo2', 'SPO2Q')
 
+        # quality signals omitted to remember original quality
         self.filter_quality_range(df, min_quality, range(0,1), 'HRQ')
-        self.filter_quality_range(df, min_quality, range(2,3), 'HRQ')
-        self.filter_quality_range(df, min_quality, range(4,8), 'HRQ')
+        self.filter_quality_range(df, min_quality, range(3,8), 'HRQ')
         self.filter_quality_range(df, min_quality, range(9, 19), 'HRQ')
+
+        #self.filter_quality_range(df, min_quality, range(1,20), 'HRQ') # used for quality estimation after filtering
+        #self.filter_quality_range(df, min_quality, range(4,5), 'SPO2Q') # used for quality estimation after filtering
+        #self.filter_quality_range(df, min_quality, range(9,10), 'QualityClassification') # used for quality estimation after filtering
 
         df.to_csv(csv_out_file, sep=';')
 
