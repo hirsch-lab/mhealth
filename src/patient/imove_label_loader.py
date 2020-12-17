@@ -59,7 +59,7 @@ class ImoveLabelLoader:
         print("num files: ", len(files_sorted))
 
     def create_labels(self, data_dir, out_dir, df1, df2, df3, filename):
-        df = self.loader.load_everion_patient_data(data_dir, filename, ';')
+        df = self.loader.load_everion_patient_data(data_dir, filename, ';', True)
         if not df.empty:
             df['de_morton_label'] = ''
             df['de_morton'] = ''

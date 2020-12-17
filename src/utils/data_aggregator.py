@@ -14,6 +14,7 @@ class DataAggregator:
     def mean_data(self, df, patient_id, out_dir):
         df_agg = pd.DataFrame({'mean': df.agg("mean", axis="rows")})
 
+        df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_convert('UTC')
         df_agg.to_csv(os.path.join(out_dir, 'Data_Aggregation_' + patient_id + '.csv'))
 
 

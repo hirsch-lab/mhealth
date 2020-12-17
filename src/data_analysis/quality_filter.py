@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+import pandas as pd
 
 from patient.patient_data_loader import PatientDataLoader
 
@@ -32,6 +33,7 @@ class QualityFilter:
         self.set_bad_quality_nan_range(df, min_quality, 'heart_rate', range(20,22))
         self.set_bad_quality_nan_range(df, min_quality, 'heart_rate', range(27,29))
 
+        df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_convert('UTC')
         df.to_csv(csv_out_file, sep=';')
 
     def filter_bad_quality_mixed_vital_raw(self, in_dir, out_dir, in_file_name, min_quality):
@@ -58,6 +60,7 @@ class QualityFilter:
         #self.filter_quality_range(df, min_quality, range(4,5), 'SPO2Q') # used for quality estimation after filtering
         #self.filter_quality_range(df, min_quality, range(9,10), 'QualityClassification') # used for quality estimation after filtering
 
+        df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_convert('UTC')
         df.to_csv(csv_out_file, sep=';')
 
     def set_bad_quality_nan_range(self, df, min_quality, signal_name, range):

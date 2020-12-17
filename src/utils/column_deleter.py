@@ -16,6 +16,11 @@ class ColumnDeleter:
                 continue
             df = self.loader.load_everion_patient_data(dir_name, filename, delimiter, False)
 
-            df_col = df.drop(df.columns[start_del:end_del], axis='columns')
+            if df.empty:
+                continue
+
+            df = df.drop(df.columns[start_del:end_del], axis='columns')
 
             df_col.to_csv(os.path.join(out_dir, filename))
+            df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_convert('UTC')
+            df.to_csv(os.path.join(out_dir, filename), ';')
