@@ -62,7 +62,7 @@ class ImoveLabelLoader:
         df = self.loader.load_everion_patient_data(data_dir, filename, ';')
         if not df.empty:
             df['de_morton_label'] = ''
-            df['de_morton'] = 0
+            df['de_morton'] = ''
 
             if not df1.empty:
                 df1.apply(lambda row: self.add_label(row, df), axis=1)
@@ -71,7 +71,8 @@ class ImoveLabelLoader:
             if not df3.empty:
                 df3.apply(lambda row: self.add_label(row, df), axis=1)
 
-            df.to_csv(os.path.join(out_dir, filename))
+            df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_convert('UTC')
+            df.to_csv(os.path.join(out_dir, filename), ';')
 
     def add_label(self, label_row, df):
         start = label_row['start_date']
