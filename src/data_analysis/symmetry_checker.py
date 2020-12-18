@@ -1,14 +1,12 @@
 import re
-import sys
 import warnings
 from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 
 from patient.patient_data_loader import PatientDataLoader
-from utils.everion_keys import EverionKeys
 
 
 def ensure_dir(path):
