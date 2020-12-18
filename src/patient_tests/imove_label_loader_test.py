@@ -5,6 +5,7 @@ from patient.imove_label_loader import ImoveLabelLoader
 from utils.file_helper import FileHelper
 
 import pandas as pd
+import numpy as np
 
 
 class ImoveLabelLoaderTest(unittest.TestCase):
@@ -44,10 +45,15 @@ class ImoveLabelLoaderTest(unittest.TestCase):
 
         self.label_loader.merge_data_and_labels(data_dir, label_dir, out_dir, 123, 123, '_storage-vital')
 
-        df = pd.read_csv(os.path.join(out_dir, '123L_storage-vital.csv'))
-        self.assertEqual((64, 1), df.shape, 'df shape not matching')
-
-
+        df = pd.read_csv(os.path.join(out_dir, '123L_storage-vital.csv'), ';')
+        self.assertEqual((64, 25), df.shape, 'df shape not matching')
+        self.assertTrue(np.isnan(df['de_morton'][0]))
+        self.assertEqual(1, df['de_morton'][1])
+        self.assertEqual(1, df['de_morton'][39])
+        self.assertEqual(1, df['de_morton'][57])
+        self.assertEqual('Temp', df['de_morton_label'][1])
+        self.assertEqual('3', df['de_morton_label'][39])
+        self.assertEqual('5A', df['de_morton_label'][57])
 
     @unittest.SkipTest
     def test_merge_data_and_labels_all(self):
