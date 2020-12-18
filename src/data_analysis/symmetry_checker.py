@@ -80,24 +80,25 @@ class SymmetryChecker:
                                                           csv_delimiter=';',
                                                           usecols=cols_filter,
                                                           dtype=dtypes)
+        has_morton = ("de_morton" in df_left) and ("de_morton" in df_right)
+        read_columns = (self._columns+["de_morton"]) if has_morton else self._columns
         df_left = df_left.set_index("timestamp")
         df_right = df_right.set_index("timestamp")
-        # select columns of interest
-        df_left = df_left[self._coi+["de_morton"]]
-        df_right = df_right[self._coi+["de_morton"]]
-        # trick to prepend column level
+        df_left = df_left[read_columns]
+        df_right = df_right[read_columns]
+        # Trick to prepend column level
         df_left = pd.concat([df_left], keys=["left"], axis=1)
         df_right = pd.concat([df_right], keys=["right"], axis=1)
         df_left = df_left.reorder_levels([1,0], axis=1)
         df_right = df_right.reorder_levels([1,0], axis=1)
-        # join on index
         df = df_left.join(df_right, how="outer")
         df = df.sort_index(axis=1)
 
         if self._resample is not None:
-            # Warning: this introduces a fixed sampling pattern!
+            # This introduces a FIXED sampling pattern!
             df = df.resample(self._resample).mean()
-            df["de_morton"] = df["de_morton"] > 0.5
+            if "de_morton" in df:
+                df["de_morton"] = df["de_morton"] > 0.5
         return df
 
 
@@ -129,39 +130,40 @@ class SymmetryChecker:
         x_zr = x.loc[zeros["right"],"left"].fillna(0)
         y_off = lambda x,s: s*scale*np.ones_like(x)
 
-        mask_morton = df["de_morton"].any(axis=1)
-        mm = mask_morton[~mask]
-        x_morton = avg[mm]
-        y_morton = diff[mm]
-
         fig, ax = plt.subplots()
-        # Lines
+
         xlim = (x.min().min(), x.max().max())
         h_mean, = ax.plot(xlim, diff_mean*np.ones(2), "b", zorder=100)
         h_cip, = ax.plot(xlim, y_off(np.ones(2), +1), ":r", zorder=100)
         h_cim, = ax.plot(xlim, y_off(np.ones(2), -1), ":r", zorder=100)
         h_dummy, = plt.plot([0],[0], color="w", alpha=0)
 
-        # Points
         h_valid = ax.scatter(avg, diff, c="black", alpha=0.05)
         h_nans = ax.scatter(x_nl, y_off(x_nl,  10), c="salmon", alpha=0.05)
         h_nans = ax.scatter(x_nr, y_off(x_nr, -10), c="salmon", alpha=0.05)
         h_zeros = ax.scatter(x_zl, y_off(x_zl,  10), c="pink", alpha=0.2)
         h_zeros = ax.scatter(x_zr, y_off(x_zr, -10), c="pink", alpha=0.2)
-        h_morton = ax.scatter(x_morton, y_morton, c="yellow", alpha=0.05)
-        # Rest
+
+        h_morton = None
+        if "de_morton" in df:
+            mask_morton = df["de_morton"].any(axis=1)
+            mm = mask_morton[~mask]
+            x_morton = avg[mm]
+            y_morton = diff[mm]
+            h_morton = ax.scatter(x_morton, y_morton, c="yellow", alpha=0.05)
+
         ax.grid(True)
         ax.set_title(f"Bland-Altman: {col}, pid={pid}")
         ax.set_xlabel("Mean: (Left+Right)/2")
         ax.set_ylabel("Difference: (Left-Right)")
-        legend = ((h_mean,   "Mean: %.3f" % diff_mean),
+        legend = [(h_mean,   "Mean: %.3f" % diff_mean),
                   (h_cim,    "95%% CI: ±%.3f" % (1.96*diff_std)),
                   (h_dummy,  ""),
                   (h_valid,  "valid"),
                   (h_nans,   "nans"),
-                  (h_zeros,  "zeros"),
-                  (h_morton, "morton")
-                  )
+                  (h_zeros,  "zeros")]
+        if h_morton:
+            legend.append((h_morton, "morton"))
 
         leg = ax.legend(*zip(*legend),
                         title="Difference:",
