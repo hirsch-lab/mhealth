@@ -11,6 +11,7 @@ git clone https://github.com/hirsch-lab/mhealth.git
 cd mhealth
 pip install -r requirements.txt
 # Run the unit tests to verify installation
+pip install pytest
 export MHEALTH_DATA="./src/resources"
 pytest
 ```
