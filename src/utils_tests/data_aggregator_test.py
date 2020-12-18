@@ -25,7 +25,7 @@ class DataAggregatorTest(unittest.TestCase):
         self.aggregator.aggregate_data(self.in_dir, out_dir, 0, 3)
 
         files = glob.glob(os.path.join(os.path.join(out_dir, '**'), '*.csv'), recursive=True)
-        self.assertEqual(4, len(files))
+        self.assertEqual(3, len(files))
 
 
     def test_aggregate_data_hourly(self):
