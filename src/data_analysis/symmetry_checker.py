@@ -1,4 +1,5 @@
 import re
+import sys
 import warnings
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -71,12 +72,12 @@ class SymmetryChecker:
         dtypes["timestamp"] = str
         df_left = self._loader.load_everion_patient_data(dir_name=self._data_dir,
                                                          filename=file_left.name,
-                                                         csv_delimiter=',',
+                                                         csv_delimiter=';',
                                                          usecols=cols_filter,
                                                          dtype=dtypes)
         df_right = self._loader.load_everion_patient_data(dir_name=self._data_dir,
                                                           filename=file_right.name,
-                                                          csv_delimiter=',',
+                                                          csv_delimiter=';',
                                                           usecols=cols_filter,
                                                           dtype=dtypes)
         df_left = df_left.set_index("timestamp")
@@ -97,7 +98,6 @@ class SymmetryChecker:
             # Warning: this introduces a fixed sampling pattern!
             df = df.resample(self._resample).mean()
             df["de_morton"] = df["de_morton"] > 0.5
-
         return df
 
 
@@ -105,34 +105,73 @@ class SymmetryChecker:
         x = df[col]
         n = len(x)
 
+        # nn: no nans
+        # nnz: no nans and no zeros
+        nans = x.isnull()
+        zeros = (x == 0)
+        if True:
+            mask = (nans|zeros).any(axis=1)
+        else:
+            mask = nans.any(axis=1)
+
         # Bland-Altman
-        diff = x["left"] - x["right"]
-        avg = x.mean(axis=1)
+        xx = x[~mask]
+        diff = xx["left"] - xx["right"]
+        avg = xx.mean(axis=1)
         diff_mean = diff.mean()
         diff_std = diff.std()
+        ci_offset = 1.96*diff_std
+        scale = ci_offset
 
-        mask = x.isnull().any(axis=1)
-        mask += 2*(x == 0).any(axis=1)
-        mask += 4*df["de_morton"].any(axis=1)
+        x_nl = x.loc[nans["left"],"right"].fillna(0)
+        x_nr = x.loc[nans["right"],"left"].fillna(0)
+        x_zl = x.loc[zeros["left"],"right"].fillna(0)
+        x_zr = x.loc[zeros["right"],"left"].fillna(0)
+        y_off = lambda x,s: s*scale*np.ones_like(x)
+
+        mask_morton = df["de_morton"].any(axis=1)
+        mm = mask_morton[~mask]
+        x_morton = avg[mm]
+        y_morton = diff[mm]
 
         fig, ax = plt.subplots()
-        ax.scatter(avg, diff, c=mask, alpha=0.1)
-        xlim = ax.get_xlim()
-        ax.plot(xlim, diff_mean*np.ones(2), "b",
-                label="Mean: %.3f" % diff_mean)
-        ax.plot(xlim, (diff_mean+1.96*diff_std)*np.ones(2), ":r")
-        ax.plot(xlim, (diff_mean-1.96*diff_std)*np.ones(2), ":r",
-                label="95%% CI: ±%.3f" % (1.96*diff_std))
+        # Lines
+        xlim = (x.min().min(), x.max().max())
+        h_mean, = ax.plot(xlim, diff_mean*np.ones(2), "b", zorder=100)
+        h_cip, = ax.plot(xlim, y_off(np.ones(2), +1), ":r", zorder=100)
+        h_cim, = ax.plot(xlim, y_off(np.ones(2), -1), ":r", zorder=100)
+        h_dummy, = plt.plot([0],[0], color="w", alpha=0)
+
+        # Points
+        h_valid = ax.scatter(avg, diff, c="black", alpha=0.05)
+        h_nans = ax.scatter(x_nl, y_off(x_nl,  10), c="salmon", alpha=0.05)
+        h_nans = ax.scatter(x_nr, y_off(x_nr, -10), c="salmon", alpha=0.05)
+        h_zeros = ax.scatter(x_zl, y_off(x_zl,  10), c="pink", alpha=0.2)
+        h_zeros = ax.scatter(x_zr, y_off(x_zr, -10), c="pink", alpha=0.2)
+        h_morton = ax.scatter(x_morton, y_morton, c="yellow", alpha=0.05)
+        # Rest
         ax.grid(True)
         ax.set_title(f"Bland-Altman: {col}, pid={pid}")
         ax.set_xlabel("Mean: (Left+Right)/2")
         ax.set_ylabel("Difference: (Left-Right)")
-        leg = ax.legend(title="Difference:",
+        legend = ((h_mean,   "Mean: %.3f" % diff_mean),
+                  (h_cim,    "95%% CI: ±%.3f" % (1.96*diff_std)),
+                  (h_dummy,  ""),
+                  (h_valid,  "valid"),
+                  (h_nans,   "nans"),
+                  (h_zeros,  "zeros"),
+                  (h_morton, "morton")
+                  )
+
+        leg = ax.legend(*zip(*legend),
+                        title="Difference:",
                         loc="upper left",
                         bbox_to_anchor=(1.05, 1.02))
         ax.set_axisbelow(True)
         plt.tight_layout()
         leg._legend_box.align = "left"
+        for lh in leg.legendHandles:
+            lh.set_alpha(1)
 
         if self._out_dir:
             filename = ("bland-altman-%s-%s.png" % (col.lower(), pid))
@@ -140,10 +179,10 @@ class SymmetryChecker:
             save_figure(path=path, fig=fig)
         plt.close(fig)
 
-        info = pd.DataFrame(columns=x.columns)
+        info = pd.DataFrame(columns=x.columns, dtype=float)
         info.loc["counts"] = n
         # null: {NaN, None NaT}
-        info.loc["nans"] = x.isnull().sum(axis=0)
+        info.loc["nans"] = nans.sum(axis=0)
         info.loc["nan_ratio"] = info.loc["nans"] / n
         info.loc["zero_ratio"] = (x == 0).sum(axis=0) / n
         info.loc["const_ratio"] = ((x.shift(1)-x) == 0).sum(axis=0) / (n-1)
@@ -158,17 +197,12 @@ class SymmetryChecker:
         info_diff["95%"] = diff.quantile(0.95)
         info_diff["corr"] = x["left"].corr(x["right"])
 
-        # print()
-        # print(col)
-        # print(info)
-        # print()
-        # print("Correlation: %.3f" % info_diff["corr"])
-
         # Format output as series with multi-level index.
         ret = pd.concat([info.unstack(),
                          info_diff.to_frame().unstack()],
                         axis=0)
         ret.name = (pid, col)
+
         return ret
 
 
@@ -178,6 +212,9 @@ class SymmetryChecker:
         files = {file_pattern.match(f.stem).groups():f for f in files}
         files = pd.Series(files)
         rets = []
+        if files.empty:
+            warnings.warn("No files found under the following location:\n%s" % self._data_dir)
+            return
         for key, df in files.groupby(level=0):
             if len(df)!=2:
                 warnings.warn("No matching files found for patient '%s'" % key)
@@ -192,3 +229,11 @@ class SymmetryChecker:
 
         rets = pd.concat(rets, axis=1)
         rets.to_csv(self._out_dir / "results.csv")
+        #rets = pd.read_csv(self._out_dir / "results.csv", header=[0,1], index_col=[0,1])
+
+        means = rets.groupby(level=1, axis=1).mean()
+        stds = rets.groupby(level=1, axis=1).std()
+        summary = pd.concat([means, stds], keys=["mean", "std"], axis=1)
+        summary = summary.reorder_levels([1,0], axis=1)
+        summary = summary.sort_index(axis=1)
+        summary.to_csv(self._out_dir / "summary.csv")
