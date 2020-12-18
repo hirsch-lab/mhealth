@@ -53,12 +53,10 @@ class QualityFilter:
 
         # quality signals omitted to remember original quality
         self.filter_quality_range(df, min_quality, range(0,1), 'HRQ')
-        self.filter_quality_range(df, min_quality, range(3,8), 'HRQ')
+        self.filter_quality_range(df, min_quality, range(2,3), 'HRQ')
+        self.filter_quality_range(df, min_quality, range(4,8), 'HRQ')
         self.filter_quality_range(df, min_quality, range(9, 19), 'HRQ')
 
-        #self.filter_quality_range(df, min_quality, range(1,20), 'HRQ') # used for quality estimation after filtering
-        #self.filter_quality_range(df, min_quality, range(4,5), 'SPO2Q') # used for quality estimation after filtering
-        #self.filter_quality_range(df, min_quality, range(9,10), 'QualityClassification') # used for quality estimation after filtering
 
         df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_convert('UTC')
         df.to_csv(csv_out_file, sep=';')
