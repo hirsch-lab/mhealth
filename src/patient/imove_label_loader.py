@@ -22,19 +22,19 @@ class ImoveLabelLoader:
         header = df.iloc[0]
         df = df[1:]
         df.columns = header
-        df['start_date'] = pd.to_datetime(df.Date.astype(str)+' '+df.Start.astype(str)).dt.tz_localize('Europe/Zurich')
+        df['start_date'] = pd.to_datetime(df.Date.astype(str) + ' ' + df.Start.astype(str)).dt.tz_localize(
+            'Europe/Zurich')
         df['duration'] = pd.to_timedelta(df['Time'])
         df['end_date'] = df['start_date'] + df['duration']
 
         return df
 
-
-    def merge_data_and_labels(self,data_dir, label_dir, out_dir,  id_range, in_file_suffix):
+    def merge_data_and_labels(self, data_dir, label_dir, out_dir, start_range, end_range, in_file_suffix):
 
         files_sorted = natsort.natsorted(os.listdir(data_dir))
 
-        for count in range(id_range):
-            id = str(count + 1).zfill(3)
+        for count in range(start_range, end_range+1):
+            id = str(count).zfill(3)
 
             found = False
             for i, filename in enumerate(files_sorted):
@@ -59,13 +59,10 @@ class ImoveLabelLoader:
         print("num files: ", len(files_sorted))
 
     def create_labels(self, data_dir, out_dir, df1, df2, df3, filename):
-        df = self.loader.load_everion_patient_data(data_dir, filename, ';')
+        df = self.loader.load_everion_patient_data(data_dir, filename, ';', True)
         if not df.empty:
-            df = df.set_index(['timestamp'])
-            df.sort_index()
-
-            df['mobility_index'] = ''
-            df['de_morton'] = 0
+            df['de_morton_label'] = ''
+            df['de_morton'] = ''
 
             if not df1.empty:
                 df1.apply(lambda row: self.add_label(row, df), axis=1)
@@ -74,26 +71,19 @@ class ImoveLabelLoader:
             if not df3.empty:
                 df3.apply(lambda row: self.add_label(row, df), axis=1)
 
-            df.to_csv(os.path.join(out_dir, filename))
+            df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_convert('UTC')
+            df.to_csv(os.path.join(out_dir, filename), ';')
 
     def add_label(self, label_row, df):
+        start = label_row['start_date']
+        end = label_row['end_date']
+        label = label_row['Task']
 
-        tmp = label_row['start_date'] in df.index
-        tmp2 = label_row['end_date'] in df.index
-        # TODO: continue here
-        if label_row['start_date'] in df.index and label_row['end_date'] in df.index:
-            df['mobility_index'].loc[label_row['start_date']:label_row['end_date']] = str(label_row['Task'])
-            df['de_morton'].loc[label_row['start_date']:label_row['end_date']] = 1
-        else:
-            print(
-                'dates out of data range. start_time=' + str(label_row['start_date']) + ', end_time=' + str(
-                    label_row['end_date']) + ', label=' +
-                str(label_row['Task']))
-
-
+        sel = (df.timestamp >= start) & (df.timestamp <= end)
+        df.loc[sel, 'de_morton_label'] = label
+        df.loc[sel, 'de_morton'] = 1
 
 
     def get_label_filename(self, day, id):
         id_prefix = id + '-' + str(day) + '.xlsx'
         return id_prefix
-

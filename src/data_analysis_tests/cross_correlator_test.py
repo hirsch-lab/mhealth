@@ -51,7 +51,7 @@ class CrossCorrelatorTest(unittest.TestCase):
                                                                ))
 
         files = glob.glob(os.path.join(os.path.join(out_dir, '**'), '*.png'), recursive=True)
-        self.assertEqual(4, len(files))
+        self.assertEqual(5, len(files))
 
     def test_cross_correlator_daily_mixed_vital_raw(self):
         out_dir = FileHelper.get_out_dir(self.in_dir_mixed, '_daily_cross')
@@ -64,7 +64,7 @@ class CrossCorrelatorTest(unittest.TestCase):
                                                               ))
 
         files = glob.glob(os.path.join(os.path.join(out_dir, '**'), '*.png'), recursive=True)
-        self.assertEqual(20, len(files))
+        self.assertEqual(25, len(files))
 
     @unittest.SkipTest
     def test_cross_hours_vital(self):

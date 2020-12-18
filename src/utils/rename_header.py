@@ -38,6 +38,7 @@ class RenameHeader:
 
         df.rename(columns=keys, inplace=True)
 
+        df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_convert('UTC')
         df.to_csv(Path(out_dir, 'Renamed_Header_' + patient_id + '.csv'))
 
 

@@ -3,6 +3,7 @@ import os
 import matplotlib.dates as d
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pandas as pd
 
 from patient.patient_data_loader import PatientDataLoader
 from utils.data_aggregator import DataAggregator
@@ -156,3 +157,60 @@ class Plotter:
         ax.set_ylabel(key, fontsize=font_size)
         ax.set_yticks([])
 
+
+    def plot_signals_and_labels(self, properties):
+        for filename in os.listdir(properties.in_dir):
+            if not (filename.endswith('csv')):
+                continue
+
+            patient_id = filename[properties.start_idx:properties.end_idx]
+            print("processing file " + filename + " with pid=" + patient_id + " ...")
+
+            in_file_suffix = '_storage-vital'
+            filename_l = patient_id + 'L' + in_file_suffix + '.csv'
+            filename_r = patient_id + 'R' + in_file_suffix + '.csv'
+
+            df_l = self.loader.load_everion_patient_data(properties.in_dir, filename_l, ';')
+            df_r = self.loader.load_everion_patient_data(properties.in_dir, filename_r, ';')
+            keys = ['HR', 'de_morton', 'de_morton_label']
+
+            if not df_l.empty:
+                df_left = df_l.set_index("timestamp")
+                df_left = df_left[keys]
+                df_left = pd.concat([df_left], keys=["left"], axis=1)
+                df_left = df_left.reorder_levels([1, 0], axis=1)
+            else:
+                df_left = df_l
+
+            if not df_r.empty:
+                df_right = df_r.set_index("timestamp")
+                df_right = df_right[keys]
+                df_right = pd.concat([df_right], keys=["right"], axis=1)
+                df_right = df_right.reorder_levels([1, 0], axis=1)
+            else:
+                df_right = df_r
+
+            df = df_left.join(df_right, how="outer")
+
+            df = df.sort_index(axis=1)
+            df = df.reset_index()
+
+            out_file_path = os.path.join(properties.out_dir, 'Labels_' + patient_id + '.png')
+            fig, ax = plt.subplots(figsize=[20, 6])
+
+            df['timestamp'] = df['timestamp'].dt.tz_convert('UTC')
+            mdates = d.date2num(df['timestamp'])
+            plt.plot_date(mdates, df['HR'], tz='UTC', xdate=True, linewidth=0.5, linestyle='solid', marker='')
+            plt.plot_date(mdates, df['de_morton'], tz='UTC', xdate=True, marker='.', markeredgecolor='k', markerfacecolor='k')
+
+            formatter = d.DateFormatter('%d.%m. %H:%M:%S')
+            ax.xaxis.set_major_formatter(formatter)
+            ax.xaxis.set_tick_params(rotation=90, labelsize=10)
+
+            plt.legend(bbox_to_anchor=(0.95, 1.15), loc='upper left', labels=['left', 'right', 'de morton'])
+            plt.xlabel('Time UTC [sec]')
+            plt.ylabel('HR [bpm]')
+            plt.title(PlotterHelper.get_plot_title(patient_id, df.timestamp.min(), df.timestamp.max()))
+            fig.savefig(out_file_path, bbox_inches='tight')
+
+            plt.close(fig)
