@@ -25,7 +25,7 @@ class ImoveLabelLoaderTest(unittest.TestCase):
         dir_name = '../resources/imove/labels'
 
         for filename in os.listdir(dir_name):
-            if not (filename.endswith('xlsx')) or filename.startswith(''):
+            if not (filename.endswith('xlsx')):
                 continue
 
             print("processing file " + filename + " ...")
