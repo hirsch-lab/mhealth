@@ -4,7 +4,18 @@ Mobile health: data analysis and visualization for health data from wearable dev
 ## Python version
 3.8 
 
-## Open new project in PyCharm
+## Setup via command line
+
+```bash
+git clone https://github.com/hirsch-lab/mhealth.git
+cd mhealth
+pip install -r requirements.txt
+# Run the unit tests to verify installation
+export MHEALTH_DATA="./src/resources"
+pytest
+```
+
+## Setup in PyCharm
 
 * "File" -> "Open"
 * Select git repository mhealth
