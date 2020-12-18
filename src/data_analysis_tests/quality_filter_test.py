@@ -81,7 +81,7 @@ class QualityFilterTest(unittest.TestCase):
                 print('processing ', filename, ' ...')
                 if not (filename.endswith('csv')):
                     continue
-                self.filter.filter_bad_quality_vital(dir_name, out_dir, filename, self.quality)
+                self.filter.filter_bad_quality_vital(dir_name, out_dir, filename, quality)
 
             self.assertTrue(True)
 
@@ -95,7 +95,7 @@ class QualityFilterTest(unittest.TestCase):
                 print('processing ', filename, ' ...')
                 if not (filename.endswith('csv')):
                     continue
-                self.filter.filter_bad_quality_mixed_vital_raw(dir_name, out_dir, filename, self.quality)
+                self.filter.filter_bad_quality_mixed_vital_raw(dir_name, out_dir, filename, quality)
 
             self.assertTrue(True)
 
