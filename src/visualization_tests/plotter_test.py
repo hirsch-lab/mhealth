@@ -129,6 +129,18 @@ class PlotterTest(unittest.TestCase):
                                                      start_idx=0, end_idx=3
                                                      ))
 
+    @unittest.SkipTest
+    def test_plot_labels_mixed_vital_raw(self):
+        in_dir = ''
+        out_dir = FileHelper.get_out_dir(in_dir, '_label_plots')
+        self.plotter.plot_signals_and_labels(VisProperties(in_dir=in_dir, out_dir=out_dir,
+                                                     normalization=Normalization.NONE,
+                                                     keys=EverionKeys.major_vital,
+                                                     short_keys=EverionKeys.short_names_vital,
+                                                     min_scale=0, max_scale=100,
+                                                     start_idx=0, end_idx=3
+                                                     ))
+
 
 if __name__ == '__main__':
     unittest.main()

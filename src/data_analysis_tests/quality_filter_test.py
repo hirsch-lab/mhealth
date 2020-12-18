@@ -38,6 +38,7 @@ class QualityFilterTest(unittest.TestCase):
             self.assertTrue(np.isnan(df_out['pressure'][2]))
             self.assertTrue(np.isnan(df_out['Classification'][7]))
             self.assertEqual(48, df_out['QualityClassification'][7])
+            self.assertEqual(79, df_out['HR'][0])
             self.assertEqual(77, df_out['HR'][10])
             self.assertEqual(77, df_out['HR'][17])
 
