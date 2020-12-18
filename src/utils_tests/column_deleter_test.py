@@ -21,7 +21,6 @@ class ColumnDeleterTest(unittest.TestCase):
         self.assertEqual(24, df.shape[1])
         self.assertEqual('energy', df.columns[1])
 
-
     def test_column_deleter_mixed_vital_raw(self):
         directory = '../resources/mixed_vital_raw_signals/'
         out_dir = FileHelper.get_out_dir(directory, '_cleaned')
@@ -33,6 +32,16 @@ class ColumnDeleterTest(unittest.TestCase):
 
         self.assertEqual(14, df.shape[1])
         self.assertEqual('Classification', df.columns[1])
+
+    @unittest.SkipTest
+    def test_clean_imove_raw(self):
+        directory = ''
+        out_dir = FileHelper.get_out_dir(directory, '_cleaned')
+
+        deleter = ColumnDeleter()
+        deleter.delete_columns_and_rename_header(directory, out_dir, 0, 11, ';')
+
+        self.assertTrue()
 
 
 
