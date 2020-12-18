@@ -50,7 +50,7 @@ class SymmetryChecker:
                             001L_storage-vital.csv
                             001R_storage-vital.csv
             out_dir: Path to output directory
-            columns: Columns to select ("columns of interest", coi)
+            columns: Columns to select ("columns of interest", _columns)
             resample: Optionally resample the data. For instance, setting
                       resample="30s" aggregates the data into 30s bins.
                       See doc of pd.DataFrame.resample for details.
@@ -60,8 +60,7 @@ class SymmetryChecker:
         self._data_dir = Path(data_dir)
         self._out_dir = Path(out_dir)
         self._resample = resample
-        # Columns of interest.
-        self._coi = columns
+        self._columns = columns
 
     def _load_data(self, file_left, file_right):
         def cols_filter(x):
@@ -106,8 +105,6 @@ class SymmetryChecker:
         x = df[col]
         n = len(x)
 
-        # nn: no nans
-        # nnz: no nans and no zeros
         nans = x.isnull()
         zeros = (x == 0)
         if True:
@@ -115,7 +112,6 @@ class SymmetryChecker:
         else:
             mask = nans.any(axis=1)
 
-        # Bland-Altman
         xx = x[~mask]
         diff = xx["left"] - xx["right"]
         avg = xx.mean(axis=1)
@@ -199,7 +195,7 @@ class SymmetryChecker:
         info_diff["95%"] = diff.quantile(0.95)
         info_diff["corr"] = x["left"].corr(x["right"])
 
-        # Format output as series with multi-level index.
+        # Output as series with multi-level index
         ret = pd.concat([info.unstack(),
                          info_diff.to_frame().unstack()],
                         axis=0)
@@ -225,14 +221,12 @@ class SymmetryChecker:
             file_right = df[(key, "R")]
             df = self._load_data(file_left=file_left, file_right=file_right)
             print("processing data for patient %s ..." % key)
-            for col in self._coi:
+            for col in self._columns:
                 ret = self._analyze_per_patient(df, col=col, pid=key)
                 rets.append(ret)
 
         rets = pd.concat(rets, axis=1)
         rets.to_csv(self._out_dir / "results.csv")
-        #rets = pd.read_csv(self._out_dir / "results.csv", header=[0,1], index_col=[0,1])
-
         means = rets.groupby(level=1, axis=1).mean()
         stds = rets.groupby(level=1, axis=1).std()
         summary = pd.concat([means, stds], keys=["mean", "std"], axis=1)
