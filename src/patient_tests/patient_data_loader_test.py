@@ -3,11 +3,13 @@ import unittest
 
 from patient.patient_data_loader import PatientDataLoader
 
+_MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../resources')
+
 
 class PatientDataLoaderTest(unittest.TestCase):
 
         def test_load_everion_data_tz_zurich(self):
-            dir_name = '../resources/vital_signals/'
+            dir_name = f'{_MHEALTH_DATA}/vital_signals/'
             loader = PatientDataLoader()
             df = loader.load_everion_patient_data(dir_name, '002_storage-sig.csv', ';')
 
@@ -17,7 +19,7 @@ class PatientDataLoaderTest(unittest.TestCase):
                              'timestamp has not correct datetime format')
 
         def test_load_everion_data_tz_utc(self):
-            dir_name = '../resources/vital_signals/'
+            dir_name = f'{_MHEALTH_DATA}/vital_signals/'
             loader = PatientDataLoader()
             df = loader.load_everion_patient_data(dir_name, '002_storage-sig.csv', ';', False)
 
@@ -27,7 +29,7 @@ class PatientDataLoaderTest(unittest.TestCase):
                              'timestamp has not correct datetime format')
 
         def test_load_extra_patient_data(self):
-            extra_data_dir_name = '../resources/extra_data/'
+            extra_data_dir_name = f'{_MHEALTH_DATA}/extra_data/'
 
             loader = PatientDataLoader()
             dict = loader.load_extra_patient_data(os.path.join(extra_data_dir_name, 'extra_data.csv'))

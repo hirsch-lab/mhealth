@@ -7,12 +7,14 @@ from utils.file_helper import FileHelper
 import pandas as pd
 import numpy as np
 
+_MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../resources')
+
 
 class ImoveLabelLoaderTest(unittest.TestCase):
     label_loader = ImoveLabelLoader()
 
     def test_load_labels(self):
-        dir_name = '../resources/imove/labels'
+        dir_name = f'{_MHEALTH_DATA}/imove/labels'
         df = self.label_loader.load_labels(dir_name, '123-2.xlsx')
 
         self.assertEqual((3, 9), df.shape, 'df shape not matching')
@@ -22,7 +24,7 @@ class ImoveLabelLoaderTest(unittest.TestCase):
                          'duration has not correct timedelta format')
 
     def test_load_labels_all(self):
-        dir_name = '../resources/imove/labels'
+        dir_name = f'{_MHEALTH_DATA}/imove/labels'
 
         for filename in os.listdir(dir_name):
             if not (filename.endswith('xlsx')):
@@ -39,8 +41,8 @@ class ImoveLabelLoaderTest(unittest.TestCase):
 
 
     def test_merge_data_and_labels(self):
-        label_dir = '../resources/imove/labels'
-        data_dir = '../resources/imove/data'
+        label_dir = f'{_MHEALTH_DATA}/imove/labels'
+        data_dir = f'{_MHEALTH_DATA}/imove/data'
         out_dir = FileHelper.get_out_dir(data_dir, '_labeled')
 
         self.label_loader.merge_data_and_labels(data_dir, label_dir, out_dir, 123, 123, '_storage-vital')

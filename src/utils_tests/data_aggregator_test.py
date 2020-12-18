@@ -10,9 +10,11 @@ import numpy as np
 
 from utils.file_helper import FileHelper
 
+_MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../resources')
+
 
 class DataAggregatorTest(unittest.TestCase):
-    in_dir = '../resources/vital_signals/'
+    in_dir = f'{_MHEALTH_DATA}/vital_signals/'
 
     aggregator = DataAggregator()
     loader = PatientDataLoader()
@@ -23,7 +25,7 @@ class DataAggregatorTest(unittest.TestCase):
         self.aggregator.aggregate_data(self.in_dir, out_dir, 0, 3)
 
         files = glob.glob(os.path.join(os.path.join(out_dir, '**'), '*.csv'), recursive=True)
-        self.assertEqual(4, len(files))
+        self.assertEqual(3, len(files))
 
 
     def test_aggregate_data_hourly(self):

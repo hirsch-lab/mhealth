@@ -8,9 +8,11 @@ from patient.patient_data_loader import PatientDataLoader
 from utils.everion_keys import EverionKeys
 from utils.file_helper import FileHelper
 
+_MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../resources')
+
 
 class HistogramPlotterTest(unittest.TestCase):
-    in_dir = '../resources/vital_signals/'
+    in_dir = f'{_MHEALTH_DATA}/vital_signals/'
     out_dir = FileHelper.get_out_dir(in_dir, '_histograms')
 
 
@@ -26,7 +28,7 @@ class HistogramPlotterTest(unittest.TestCase):
         self.assertEqual(66, len(files))
 
     def test_plot_all_histograms_mixed_raw_vital(self):
-        in_dir = '../resources/mixed_vital_raw_signals/'
+        in_dir = f'{_MHEALTH_DATA}/mixed_vital_raw_signals/'
         out_dir = FileHelper.get_out_dir(in_dir, '_histograms')
 
         self.plotter.plot_all_histograms(in_dir, out_dir, 0, 3, EverionKeys.major_mixed_vital_raw)

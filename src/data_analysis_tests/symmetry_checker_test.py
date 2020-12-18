@@ -5,11 +5,13 @@ import unittest
 from data_analysis.symmetry_checker import SymmetryChecker
 from utils.file_helper import FileHelper
 
+_MHEALTH_DATA = os.getenv("MHEALTH_DATA", "../resources")
+
 
 class QualityFilterTest(unittest.TestCase):
 
     def test_symmetry_analysis(self):
-        data_dir = "../resources/imove/data"
+        data_dir = f"{_MHEALTH_DATA}/imove/data"
         out_dir = FileHelper.get_out_dir(data_dir, '_symmetry')
 
         check = SymmetryChecker(data_dir=data_dir,

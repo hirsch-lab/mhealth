@@ -7,12 +7,14 @@ from patient.patient_data_loader import PatientDataLoader
 from utils.everion_keys import EverionKeys
 from utils.file_helper import FileHelper
 
+_MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../resources')
+
 
 class GenderVisualizerTest(unittest.TestCase):
 
     def test_plot_age(self):
-        in_dir = '../resources/vital_signals/'
-        extra_data_dir_name = '../resources/extra_data/'
+        in_dir = f'{_MHEALTH_DATA}/vital_signals/'
+        extra_data_dir_name = f'{_MHEALTH_DATA}/extra_data/'
 
         out_dir = FileHelper.get_out_dir(in_dir, '_gender_plot')
         plotter = GenderAgeVisualizer()

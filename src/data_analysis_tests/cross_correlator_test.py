@@ -8,10 +8,12 @@ from visualization.vis_properties import VisProperties
 from utils.everion_keys import EverionKeys
 from utils.file_helper import FileHelper
 
+_MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../resources')
+
 
 class CrossCorrelatorTest(unittest.TestCase):
-    in_dir = '../resources/vital_signals/'
-    in_dir_mixed = '../resources/mixed_vital_raw_signals/'
+    in_dir = f'{_MHEALTH_DATA}/vital_signals/'
+    in_dir_mixed = f'{_MHEALTH_DATA}/mixed_vital_raw_signals/'
     correlator = CrossCorrelator()
 
     def test_cross_correlator_daily(self):
