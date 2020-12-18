@@ -9,7 +9,7 @@ class PatientDataLoader:
         print("loading everion data from file " + filename + " ...")
 
         csv_in_file = os.path.join(dir_name, filename)
-        if os.path.getsize(csv_in_file) <= 0:
+        if not os.path.exists(csv_in_file) or os.path.getsize(csv_in_file) <= 0:
             print("csv file is empty")
             return pd.DataFrame()
 
