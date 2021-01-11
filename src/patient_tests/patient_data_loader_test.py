@@ -9,11 +9,12 @@ _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../resources')
 class PatientDataLoaderTest(unittest.TestCase):
 
         def test_load_everion_data_tz_zurich(self):
+            """test df for: amount of cols, dimensions, ZRH time zone. """
             dir_name = f'{_MHEALTH_DATA}/vital_signals/'
             loader = PatientDataLoader()
             df = loader.load_everion_patient_data(dir_name, '002_storage-sig.csv', ';')
 
-            self.assertEqual(30, len(df.columns), 'not correct amount of keys loaded')
+            self.assertEqual(30, len(df.columns), 'not correct amount of keys (=cols) loaded')
             self.assertEqual((29,30), df.shape, 'df shape not matching')
             self.assertEqual('datetime64[ns, Europe/Zurich]', df['timestamp'].dtypes,
                              'timestamp has not correct datetime format')

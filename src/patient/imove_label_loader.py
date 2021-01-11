@@ -74,12 +74,12 @@ class ImoveLabelLoader:
             df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_convert('UTC')
             df.to_csv(os.path.join(out_dir, filename), ';')
 
-    def add_label(self, label_row, df):
+    def add_label(self, label_row, df): ##
         start = label_row['start_date']
         end = label_row['end_date']
         label = label_row['Task']
 
-        sel = (df.timestamp >= start) & (df.timestamp <= end)
+        sel = (df.timestamp >= start) & (df.timestamp <= end) # Boolean Selector
         df.loc[sel, 'de_morton_label'] = label
         df.loc[sel, 'de_morton'] = 1
 
@@ -87,3 +87,5 @@ class ImoveLabelLoader:
     def get_label_filename(self, day, id):
         id_prefix = id + '-' + str(day) + '.xlsx'
         return id_prefix
+        
+    
