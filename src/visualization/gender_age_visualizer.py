@@ -20,7 +20,7 @@ class GenderAgeVisualizer:
             gender = 'male'
         age = df_nested[pid]['age']
 
-        df = df.mean()
+        df = df.mean(numeric_only=True)
 
         df_row = pd.DataFrame({'RR': df.RR, 'SPO2': df.SPO2, 'HR': df.HR,
                                'HRV': df.HRV, 'Temp': df.Temp, 'Age': age,
