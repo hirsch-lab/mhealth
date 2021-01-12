@@ -117,8 +117,15 @@ class BarChartsPlotter:
         ax.bar(x, signal.transpose(), color=cbar, edgecolor='None', linewidth=0.5)
         ax.plot(x, signal_2, color='red')
         y_ticks = ax.get_yticks()
-        y_ticks += centers[key]
-        ax.set_yticklabels(np.around(y_ticks, decimals=1))
+        y_ticks_labels = y_ticks + centers[key]
+        y_ticks_labels = np.around(y_ticks_labels, decimals=1)
+        # Exact positions of rounded labels
+        y_ticks = y_ticks_labels - centers[key]
+        # Set tick positions and labels together (issues a warning otherwise).
+        # https://github.com/matplotlib/matplotlib/issues/18848
+        ax.set_yticks(y_ticks)
+        ax.set_yticklabels(y_ticks_labels)
+
 
     def custom_subplots_multiscale(self, axn, df_m, df_h, font_size, x, x_daily_lines, x_ticks, x_tick_labels):
         centers = self.get_centers(df_h)
@@ -127,9 +134,13 @@ class BarChartsPlotter:
         ax = axn.flat[0]
         cbar = PlotterHelper.get_bar_color(df_h, SignalProperties.colors_d[3], SignalProperties.colors_d[0])
         ax.bar(x, df_h[key].transpose(), edgecolor='None', linewidth=0.5)
+        # See custom_plot_fct() for details.
         y_ticks = ax.get_yticks()
-        y_ticks += centers[key]
-        ax.set_yticklabels(np.around(y_ticks, decimals=1))
+        y_ticks_labels = y_ticks + centers[key]
+        y_ticks_labels = np.around(y_ticks_labels, decimals=1)
+        y_ticks = y_ticks_labels - centers[key]
+        ax.set_yticks(y_ticks)
+        ax.set_yticklabels(y_ticks_labels)
         ax.set_ylabel(key, fontsize=font_size)
         ax.set_xticks(x_ticks)
         ax.set_xticklabels(x_tick_labels)
