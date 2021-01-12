@@ -115,28 +115,22 @@ class SymmetryChecker:
         avg = xx.mean(axis=1)
         diff_mean = diff.mean()
         diff_std = diff.std()
-        ci_offset = 1.96*diff_std
-        scale = ci_offset
+        offset_ci = 1.96*diff_std
+        offset_miss = diff.abs().max()*1.2
 
-        x_nl = x.loc[nans["left"],"right"].fillna(0)
-        x_nr = x.loc[nans["right"],"left"].fillna(0)
-        x_zl = x.loc[zeros["left"],"right"].fillna(0)
-        x_zr = x.loc[zeros["right"],"left"].fillna(0)
-        y_off = lambda x,s: s*scale*np.ones_like(x)
+        x_nl = x.loc[nans["left"],"right"]
+        x_nr = x.loc[nans["right"],"left"]
+        x_zl = x.loc[zeros["left"],"right"]
+        x_zr = x.loc[zeros["right"],"left"]
+        y_off = lambda x, offset: offset*np.ones_like(x)
 
         fig, ax = plt.subplots()
 
-        xlim = (x.min().min(), x.max().max())
-        h_mean, = ax.plot(xlim, diff_mean*np.ones(2), "b", zorder=100)
-        h_cip, = ax.plot(xlim, y_off(np.ones(2), +1), ":r", zorder=100)
-        h_cim, = ax.plot(xlim, y_off(np.ones(2), -1), ":r", zorder=100)
-        h_dummy, = plt.plot([0],[0], color="w", alpha=0)
-
         h_valid = ax.scatter(avg, diff, c="black", alpha=0.05)
-        h_nans = ax.scatter(x_nl, y_off(x_nl,  10), c="salmon", alpha=0.05)
-        h_nans = ax.scatter(x_nr, y_off(x_nr, -10), c="salmon", alpha=0.05)
-        h_zeros = ax.scatter(x_zl, y_off(x_zl,  10), c="pink", alpha=0.2)
-        h_zeros = ax.scatter(x_zr, y_off(x_zr, -10), c="pink", alpha=0.2)
+        h_nans = ax.scatter(x_nl, y_off(x_nl,  offset_miss), c="salmon", alpha=0.05)
+        h_nans = ax.scatter(x_nr, y_off(x_nr, -offset_miss), c="salmon", alpha=0.05)
+        h_zeros = ax.scatter(x_zl, y_off(x_zl,  offset_miss), c="pink", alpha=0.2)
+        h_zeros = ax.scatter(x_zr, y_off(x_zr, -offset_miss), c="pink", alpha=0.2)
 
         h_morton = None
         if "de_morton" in df:
@@ -145,6 +139,12 @@ class SymmetryChecker:
             x_morton = avg[mm]
             y_morton = diff[mm]
             h_morton = ax.scatter(x_morton, y_morton, c="yellow", alpha=0.05)
+
+        xlim = ax.get_xlim()
+        h_mean, = ax.plot(xlim, diff_mean*np.ones(2), "b", zorder=100)
+        h_cip, = ax.plot(xlim, y_off(np.ones(2), +offset_ci), ":r", zorder=100)
+        h_cim, = ax.plot(xlim, y_off(np.ones(2), -offset_ci), ":r", zorder=100)
+        h_dummy, = plt.plot([avg.mean()],[0], color="w", alpha=0)
 
         ax.grid(True)
         ax.set_title(f"Bland-Altman: {col}, pid={pid}")
