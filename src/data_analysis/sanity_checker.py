@@ -10,12 +10,11 @@ from patient.patient_data_loader import PatientDataLoader
 class SanityChecker:
     loader = PatientDataLoader()
 
-    def run_vital(self, dir_name, id_range, in_file_suffix, out_file_name):
-        csv_out_file = os.path.join(os.path.join(dir_name, os.pardir), out_file_name)
-        if os.path.exists(csv_out_file):
-            os.remove(csv_out_file)
+    def run_vital(self, in_dir, id_range, in_file_suffix, out_file):
+        if os.path.exists(out_file):
+            os.remove(out_file)
 
-        with open(csv_out_file, mode='a+') as out_file:
+        with open(out_file, mode='a+') as out_file:
             csv_writer = csv.writer(out_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             csv_writer.writerow(['Id', 'Available', '#ValidRows', '#ValidHours',
                                  'timestamp_min', 'timestamp_max', 'hours',
@@ -33,7 +32,7 @@ class SanityChecker:
                                  'E_q_mean', 'E_q_std', 'E_q_min', 'E_q_max'
                                  ])
 
-            files_sorted = natsort.natsorted(os.listdir(dir_name))
+            files_sorted = natsort.natsorted(os.listdir(in_dir))
 
             for count in range(id_range):
                 id = str(count + 1).zfill(3)
@@ -50,7 +49,7 @@ class SanityChecker:
                 else:
                     filename = id + in_file_suffix
                     print("processing file: ", filename, " ...")
-                    file_path = os.path.join(dir_name, filename)
+                    file_path = os.path.join(in_dir, filename)
 
                     with open(file_path) as csv_file:
                         csv_reader = csv.reader(csv_file, delimiter=';') # TODO: use df from below
@@ -67,7 +66,7 @@ class SanityChecker:
 
                         valid_hours = line_count / 3600.0
 
-                        df = self.loader.load_everion_patient_data(dir_name,filename, ';')
+                        df = self.loader.load_everion_patient_data(in_dir, filename, ';')
 
                         df['timestamp'] = pd.to_datetime(df['timestamp'])
                         ts_max = max(df['timestamp'])
@@ -178,12 +177,11 @@ class SanityChecker:
 
             print("num files: ", len(files_sorted))
 
-    def run_mixed_raw_vital(self, dir_name, id_range, in_file_suffix, out_file_name):
-        csv_out_file = os.path.join(os.path.join(dir_name, os.pardir), out_file_name)
-        if os.path.exists(csv_out_file):
-            os.remove(csv_out_file)
+    def run_mixed_raw_vital(self, in_dir, id_range, in_file_suffix, out_file):
+        if os.path.exists(out_file):
+            os.remove(out_file)
 
-        with open(csv_out_file, mode='a+') as out_file:
+        with open(out_file, mode='a+') as out_file:
             csv_writer = csv.writer(out_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             csv_writer.writerow(['Id', 'Available', '#ValidRows', '#ValidHours',
                                  'timestamp_min', 'timestamp_max', 'hours',
@@ -197,7 +195,7 @@ class SanityChecker:
                                  'AC_q_mean', 'AC_q_std', 'AC_q_min', 'AC_q_max'
                                  ])
 
-            files_sorted = natsort.natsorted(os.listdir(dir_name))
+            files_sorted = natsort.natsorted(os.listdir(in_dir))
 
             for count in range(id_range):
                 id = str(count + 1).zfill(3)
@@ -214,7 +212,7 @@ class SanityChecker:
                 else:
                     filename = id + in_file_suffix
                     print("processing file: ", filename, " ...")
-                    file_path = os.path.join(dir_name, filename)
+                    file_path = os.path.join(in_dir, filename)
 
                     with open(file_path) as csv_file:
                         csv_reader = csv.reader(csv_file, delimiter=';')  # TODO: use df from below
@@ -231,7 +229,7 @@ class SanityChecker:
 
                         valid_hours = line_count / 3600.0
 
-                        df = self.loader.load_everion_patient_data(dir_name, filename, ';')
+                        df = self.loader.load_everion_patient_data(in_dir, filename, ';')
 
                         df['timestamp'] = pd.to_datetime(df['timestamp'])
                         ts_max = max(df['timestamp'])
@@ -310,12 +308,11 @@ class SanityChecker:
 
             print("num files: ", len(files_sorted))
 
-    def run_imove(self, dir_name, id_range, in_file_suffix, out_file_name):
-        csv_out_file = os.path.join(os.path.join(dir_name, os.pardir), out_file_name)
-        if os.path.exists(csv_out_file):
-            os.remove(csv_out_file)
+    def run_imove(self, in_dir, id_range, in_file_suffix, out_file):
+        if os.path.exists(out_file):
+            os.remove(out_file)
 
-        with open(csv_out_file, mode='a+') as out_file:
+        with open(out_file, mode='a+') as out_file:
             csv_writer = csv.writer(out_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             csv_writer.writerow(['Id', 'Available', '#ValidRows', '#ValidHours',
                                  'timestamp_min', 'timestamp_max', 'hours',
@@ -327,7 +324,7 @@ class SanityChecker:
                                  'AC_q_mean', 'AC_q_std', 'AC_q_min', 'AC_q_max'
                                  ])
 
-            files_sorted = natsort.natsorted(os.listdir(dir_name))
+            files_sorted = natsort.natsorted(os.listdir(in_dir))
 
             for count in range(id_range):
                 id = str(count + 1).zfill(3)
@@ -344,19 +341,19 @@ class SanityChecker:
                 else:
                     filename = id + 'L' + in_file_suffix
                     print("processing file: ", filename, " ...")
-                    file_path = os.path.join(dir_name, filename)
+                    file_path = os.path.join(in_dir, filename)
                     if os.path.exists(file_path):
-                        self.write_row_one_side(csv_writer, dir_name, file_path, filename, id, 'L')
+                        self.write_row_one_side(csv_writer, in_dir, file_path, filename, id, 'L')
 
                     filename = id + 'R' + in_file_suffix
                     print("processing file: ", filename, " ...")
-                    file_path = os.path.join(dir_name, filename)
+                    file_path = os.path.join(in_dir, filename)
                     if os.path.exists(file_path):
-                        self.write_row_one_side(csv_writer, dir_name, file_path, filename, id, 'R')
+                        self.write_row_one_side(csv_writer, in_dir, file_path, filename, id, 'R')
 
             print("num files: ", len(files_sorted))
 
-    def write_row_one_side(self, csv_writer, dir_name, file_path, filename, id, side):
+    def write_row_one_side(self, csv_writer, in_dir, file_path, filename, id, side):
         with open(file_path) as csv_file:
             csv_reader = csv.reader(csv_file, delimiter=';')  # TODO: use df from below
             line_count = 0
@@ -371,7 +368,7 @@ class SanityChecker:
 
             valid_hours = line_count / 3600.0
 
-            df = self.loader.load_everion_patient_data(dir_name, filename, ';')
+            df = self.loader.load_everion_patient_data(in_dir, filename, ';')
 
             df['timestamp'] = pd.to_datetime(df['timestamp'])
             ts_max = max(df['timestamp'])
