@@ -9,66 +9,100 @@ from utils.everion_keys import EverionKeys
 from utils.file_helper import FileHelper
 
 _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../resources')
+_MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')
 
 
 class HistogramPlotterTest(unittest.TestCase):
-    in_dir = f'{_MHEALTH_DATA}/vital_signals/'
-    out_dir = FileHelper.get_out_dir(in_dir, '_histograms')
-
-
+    out_dir = _MHEALTH_OUT_DIR
     plotter = HistogramPlotter()
 
 
     def test_plot_all_histograms_vital(self):
-        if os.path.exists(self.out_dir):
-            shutil.rmtree(self.out_dir)
-        self.plotter.plot_all_histograms(self.in_dir, self.out_dir, 0, 3, EverionKeys.all_vital)
+        in_dir = f'{_MHEALTH_DATA}/vital_signals/'
+        out_dir = FileHelper.get_out_dir(in_dir=in_dir,
+                                         out_dir=self.out_dir,
+                                         out_dir_suffix='_histograms')
+        if out_dir.is_dir():
+            shutil.rmtree(out_dir)
+        self.plotter.plot_all_histograms(in_dir=in_dir,
+                                         out_dir=out_dir,
+                                         start_idx=0,
+                                         end_idx=3,
+                                         keys=EverionKeys.all_vital)
 
-        files = glob.glob(os.path.join(os.path.join(self.out_dir, '**'), '*.png'), recursive=True)
+        files = list(out_dir.glob('**/*.png'))
         self.assertEqual(66, len(files))
+
 
     def test_plot_all_histograms_mixed_raw_vital(self):
         in_dir = f'{_MHEALTH_DATA}/mixed_vital_raw_signals/'
-        out_dir = FileHelper.get_out_dir(in_dir, '_histograms')
+        out_dir = FileHelper.get_out_dir(in_dir=in_dir,
+                                         out_dir=self.out_dir,
+                                         out_dir_suffix='_histograms')
 
-        self.plotter.plot_all_histograms(in_dir, out_dir, 0, 3, EverionKeys.major_mixed_vital_raw)
+        self.plotter.plot_all_histograms(in_dir=in_dir,
+                                         out_dir=out_dir,
+                                         start_idx=0,
+                                         end_idx=3,
+                                         keys=EverionKeys.major_mixed_vital_raw)
 
-        files = glob.glob(os.path.join(os.path.join(out_dir, '**'), '*.png'), recursive=True)
+        files = list(out_dir.glob('**/*.png'))
         self.assertEqual(25, len(files))
 
 
     def test_plot_histogram_one_patient_vital(self):
-        if os.path.exists(self.out_dir):
-            shutil.rmtree(self.out_dir)
+        in_dir = f'{_MHEALTH_DATA}/vital_signals/'
+        out_dir = FileHelper.get_out_dir(in_dir=in_dir,
+                                         out_dir=self.out_dir,
+                                         out_dir_suffix='_histograms')
+        if out_dir.is_dir():
+            shutil.rmtree(out_dir)
 
         filename = '002_storage-sig.csv'
         loader = PatientDataLoader()
-        df = loader.load_everion_patient_data(self.in_dir, filename,';')
+        df = loader.load_everion_patient_data(dir_name=in_dir,
+                                              filename=filename,
+                                              csv_delimiter=';')
         if df.empty:
             self.assertFalse()
 
-        self.plotter.plot_histogram(self.out_dir, '002', df, EverionKeys.all_vital)
+        self.plotter.plot_histogram(out_dir=out_dir,
+                                    patient_id='002',
+                                    df=df,
+                                    keys=EverionKeys.all_vital)
 
-        files = glob.glob(os.path.join(os.path.join(self.out_dir, '**'), '*.png'), recursive=True)
+        files = list(out_dir.glob('**/*.png'))
         self.assertEqual(22, len(files))
+
 
     @unittest.SkipTest
     def test_plot_histogram_vital(self):
         in_dir = ''
-        out_dir = FileHelper.get_out_dir(in_dir, '_histograms')
-
-        self.plotter.plot_histogram(in_dir, out_dir, EverionKeys.all_vital)
+        out_dir = FileHelper.get_out_dir(in_dir=in_dir,
+                                         out_dir=self.out_dir,
+                                         out_dir_suffix='_histograms')
+        self.plotter.plot_histogram(in_dir=in_dir,
+                                    out_dir=out_dir,
+                                    keys=EverionKeys.all_vital)
         self.assertTrue(True)
+
 
     @unittest.SkipTest
     def test_plot_all_histograms_mixed_vital_raw(self):
         in_dir = ''
-        out_dir = FileHelper.get_out_dir(in_dir, '_histograms')
+        out_dir = FileHelper.get_out_dir(in_dir=in_dir,
+                                         out_dir=self.out_dir,
+                                         out_dir_suffix='_histograms')
 
-        if os.path.exists(out_dir):
+        if out_dir.is_dir():
             shutil.rmtree(out_dir)
-        self.plotter.plot_all_histograms(in_dir, out_dir, 15, 39, EverionKeys.major_mixed_vital_raw)
+        self.plotter.plot_all_histograms(in_dir=in_dir,
+                                         out_dir=out_dir,
+                                         start_idx=15,
+                                         end_idx=39,
+                                         keys=EverionKeys.major_mixed_vital_raw)
         self.assertTrue(True)
+
 
 if __name__ == '__main__':
     unittest.main()

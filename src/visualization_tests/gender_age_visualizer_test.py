@@ -8,50 +8,77 @@ from utils.everion_keys import EverionKeys
 from utils.file_helper import FileHelper
 
 _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../resources')
+_MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')
 
 
 class GenderVisualizerTest(unittest.TestCase):
+    out_dir = _MHEALTH_OUT_DIR
 
     def test_plot_age(self):
         in_dir = f'{_MHEALTH_DATA}/vital_signals/'
         extra_data_dir_name = f'{_MHEALTH_DATA}/extra_data/'
 
-        out_dir = FileHelper.get_out_dir(in_dir, '_gender_plot')
+        out_dir = FileHelper.get_out_dir(in_dir=in_dir,
+                                         out_dir=self.out_dir,
+                                         out_dir_suffix='_gender_plot')
+
+        filepath = os.path.join(extra_data_dir_name, 'extra_data.csv')
+        lookup_table = PatientDataLoader.load_extra_patient_data(filepath)
+
         plotter = GenderAgeVisualizer()
-        lookup_table = PatientDataLoader.load_extra_patient_data(os.path.join(extra_data_dir_name, 'extra_data.csv'))
+        plotter.plot_data(in_dir=in_dir,
+                          out_dir=out_dir,
+                          start_idx=0,
+                          end_idx=3,
+                          lookup_table=lookup_table,
+                          keys=EverionKeys.major_vital,
+                          short_keys=EverionKeys.short_names_vital)
 
-        plotter.plot_data(in_dir, out_dir, 0, 3, lookup_table, EverionKeys.major_vital, EverionKeys.short_names_vital)
-
-        files = glob.glob(os.path.join(os.path.join(out_dir, '**'), '*.png'), recursive=True)
+        files = list(out_dir.glob('**/*.png'))
         self.assertEqual(1, len(files))
+
 
     @unittest.SkipTest
     def test_plot_age_vital(self):
         in_dir = ''
         extra_data_dir_name = ''
-
-        out_dir = FileHelper.get_out_dir(in_dir, '_gender_plot')
+        out_dir = FileHelper.get_out_dir(in_dir=in_dir,
+                                         out_dir=self.out_dir,
+                                         out_dir_suffix='_gender_plot')
+        filepath = os.path.join(extra_data_dir_name, 'extra_data.csv')
+        lookup_table = PatientDataLoader.load_extra_patient_data(filepath)
         plotter = GenderAgeVisualizer()
-        lookup_table = PatientDataLoader.load_extra_patient_data(os.path.join(extra_data_dir_name, 'extra_data.csv'))
+        plotter.plot_data(in_dir=in_dir,
+                          out_dir=out_dir,
+                          start_idx=0,
+                          end_idx=3,
+                          lookup_table=lookup_table,
+                          keys=EverionKeys.major_vital,
+                          short_keys=EverionKeys.short_names_vital)
 
-        plotter.plot_data(in_dir, out_dir, 0, 3, lookup_table, EverionKeys.major_vital, EverionKeys.short_names_vital)
-
-        files = glob.glob(os.path.join(os.path.join(out_dir, '**'), '*.png'), recursive=True)
+        files = list(out_dir.glob('**/*.png'))
         self.assertEqual(1, len(files))
+
 
     @unittest.SkipTest
     def test_plot_age_mixed_vital_raw(self):
         in_dir = ''
         extra_data_dir_name = ''
-
-        out_dir = FileHelper.get_out_dir(in_dir, '_gender_plot2')
+        out_dir = FileHelper.get_out_dir(in_dir=in_dir,
+                                         out_dir=self.out_dir,
+                                         out_dir_suffix='_gender_plot2')
+        filepath = os.path.join(extra_data_dir_name, '.csv')
+        lookup_table = PatientDataLoader.load_extra_patient_data(filepath)
         plotter = GenderAgeVisualizer()
-        lookup_table = PatientDataLoader.load_extra_patient_data(os.path.join(extra_data_dir_name, '.csv'))
+        plotter.plot_data(in_dir=in_dir,
+                          out_dir=out_dir,
+                          start_idx=0,
+                          end_idx=3,
+                          lookup_table=lookup_table,
+                          keys=EverionKeys.major_mixed_vital_raw,
+                          short_keys=EverionKeys.short_names_mixed_vital_raw)
 
-        plotter.plot_data(in_dir, out_dir, 0, 3, lookup_table, EverionKeys.major_mixed_vital_raw,
-                          EverionKeys.short_names_mixed_vital_raw)
-
-        files = glob.glob(os.path.join(os.path.join(out_dir, '**'), '*.png'), recursive=True)
+        files = list(out_dir.glob('**/*.png'))
         self.assertEqual(1, len(files))
 
 
