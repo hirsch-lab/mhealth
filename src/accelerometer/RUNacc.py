@@ -18,17 +18,25 @@ from accelerometer import load_accelerometer, create_accelerometer
 
 # Define folder and filename
 dir_name = '/Users/JULIEN/GD/ACLS/TM1/DATA/imove_data/raw_labeled_0-10' # acc sensor data
-filename = '001L_storage-vital_raw.csv' # acc sensor file
 
-# RUN imported modules
-df, morton = load_accelerometer(dir_name, filename)
-accelerometer = create_accelerometer(df=df, morton=morton, outname='001L_accelometer.csv')
+# Process all Accelerometer sensor files: XXXX_storage-vital_raw.csv
+for file_name in os.listdir(dir_name)[0:2]:    
+    ID = file_name[0:4] # file ID
+    print(f"Processing: {file_name} ..." )
+
+    # RUN imported modules
+    df, morton = load_accelerometer(dir_name, file_name)
+    accelerometer = create_accelerometer(df=df, morton=morton, outname=f"{ID}_acc_during_morton.csv", time_offset=15)
 
 
-
-## Load prepared acc 
-# dir_name = '/Users/JULIEN/GD/ACLS/TM1/DATA/imove_data/raw_labeled_0-10'
-# filename = '001L_accelometer.csv'
-# csv_in_file = os.path.join(Path('./output'), filename)
-# acc_imported = pd.read_csv(csv_in_file, sep=';') # , **kwargs
 ## acc_imported.info() # date_time wird nach import wieder object statt datetime64
+
+# Process just on file
+# ID = '001L'
+# df, morton = load_accelerometer(dir_name, '001L_storage-vital_raw.csv')
+# accelerometer = create_accelerometer(df=df, morton=morton, outname=f"{ID}_acc_during_morton.csv", time_offset=15)
+
+
+
+
+

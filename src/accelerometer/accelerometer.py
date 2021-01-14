@@ -38,7 +38,7 @@ def load_accelerometer(dir_name, filename):
     return df, morton
 
 
-def create_accelerometer(df, morton, outname):
+def create_accelerometer(df, morton, outname, time_offset=15):
     """Extract uebungsserie for each date, subset accelerometer for 
     15mins timedelta around uebungsserie. Save as .csv to /output. 
     Output: accelerometer (df).
@@ -50,8 +50,8 @@ def create_accelerometer(df, morton, outname):
         sub = morton[morton["date"]==date]
     
         # add 15' timedeltas
-        start = sub.date_time.min() - timedelta(minutes=15)
-        end   = sub.date_time.max() + timedelta(minutes=15)
+        start = sub.date_time.min() - timedelta(minutes=time_offset)
+        end   = sub.date_time.max() + timedelta(minutes=time_offset)
         
         sel = (df.date_time >= start) & (df.date_time <= end) # Boolean Selector
         acc = df[sel]
