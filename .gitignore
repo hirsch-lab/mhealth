@@ -133,3 +133,17 @@ dmypy.json
 .idea/*
 /venv/
 *.png
+
+
+# JULIEN:
+src/accelerometer/1_templates/
+src/accelerometer/2_code_examples/
+src/accelerometer/3_saved_ipynb/4_code_test/
+src/accelerometer/5_Rest/
+src/accelerometer/10_Screenshots/
+src/accelerometer/_path.txt
+
+src/JB/
+
+
+
