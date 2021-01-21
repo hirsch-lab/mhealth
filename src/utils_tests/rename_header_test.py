@@ -9,7 +9,9 @@ class RenameHeaderTest(unittest.TestCase):
     def test_change_header_mixed_vital_raw(self):
         directory = ''
         header = RenameHeader()
-        header.change_header(directory, 107, 131)
+        header.change_header(dir_name=directory,
+                             start_idx=107,
+                             end_idx=131)
         self.assertTrue(True)
 
 

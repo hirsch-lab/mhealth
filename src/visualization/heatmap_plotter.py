@@ -29,7 +29,7 @@ class HeatmapPlotter:
     def custom_plot_fct(self, ax, font_size, key, signal, x):
         min_scale = PlotterHelper.get_min_scale(key, signal)
         max_scale = PlotterHelper.get_max_scale(key, signal)
-        signal = signal[:, np.newaxis]
+        signal = signal.values[:, np.newaxis]
         cbar_min_scale = int(min_scale)
         cbar_max_scale = int(max_scale + 0.5)
         cbar_step = int((cbar_max_scale - cbar_min_scale) / 2)

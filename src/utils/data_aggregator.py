@@ -12,7 +12,12 @@ class DataAggregator:
     loader = PatientDataLoader()
 
     def mean_data(self, df, patient_id, out_dir):
-        df_agg = pd.DataFrame({'mean': df.agg("mean", axis="rows")})
+        if not df.empty:
+            df_agg = pd.DataFrame({'mean': df.mean(axis="rows",
+                                                   numeric_only=True)})
+        else:
+            # To silence a warning in presence of empty frames.
+            df_agg = pd.DataFrame({'mean': []})
 
         if not df_agg.empty:
             df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_convert('UTC')
