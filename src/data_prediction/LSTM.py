@@ -55,7 +55,7 @@ class LSTMModel:
 
         input_train = input_train.reshape((input_train.shape[0], 1, input_train.shape[1]))
         input_val = input_val.reshape((input_val.shape[0], 1, input_val.shape[1]))
-        label_train = label_train.reshape((label_train.shape[0], 1, input_val.shape[2]))
+        label_train = label_train.reshape((label_train.shape[0], 1, label_train.shape[1]))
         label_val = label_val.reshape((label_val.shape[0], 1, label_val.shape[1]))
         input_test = input_test.reshape((input_test.shape[0], 1, input_test.shape[1]))
         label_test =label_test.reshape((label_test.shape[0], 1, label_test.shape[1]))
@@ -141,13 +141,13 @@ class LSTMModel:
 
         model_json = model.to_json()
         with open("/Users/reys/Desktop/ACLS_Master/MasterThesis/DataMining_covid/"
-                  "UKBB/LSTM/150_test_data_no_att/lstm_ukbb_v3.json", "w") as json_file:
+                  "UKBB/LSTM/150_test_data_plain/changed_input/lstm_ukbb_v100.json", "w") as json_file:
             json_file.write(model_json)
         model.save_weights("/Users/reys/Desktop/ACLS_Master/MasterThesis/DataMining_covid/"
-                           "UKBB/LSTM/150_test_data_no_att/lstm_ukbb_v3.h5")
+                           "UKBB/LSTM/150_test_data_plain/changed_input/lstm_ukbb_v100.h5")
 
         plot_model(model, to_file='/Users/reys/Desktop/ACLS_Master/MasterThesis/DataMining_covid/'
-                                  'UKBB/LSTM/150_test_data_no_att/model_plot3.png',
+                                  'UKBB/LSTM/150_test_data_plain/changed_input/model_plot100.png',
                    show_shapes=True, show_layer_names=True)
 
 #####################################################################################################
