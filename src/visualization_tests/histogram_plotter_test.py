@@ -5,8 +5,8 @@ import unittest
 
 from visualization.histogram_plotter import HistogramPlotter
 from patient.patient_data_loader import PatientDataLoader
-from utils.everion_keys import EverionKeys
 from utils.file_helper import FileHelper
+from utils import everion_keys
 
 _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')
@@ -28,7 +28,7 @@ class HistogramPlotterTest(unittest.TestCase):
                                          out_dir=out_dir,
                                          start_idx=0,
                                          end_idx=3,
-                                         keys=EverionKeys.all_vital)
+                                         keys=everion_keys.ALL_VITAL)
 
         files = list(out_dir.glob('**/*.png'))
         self.assertEqual(66, len(files))
@@ -44,7 +44,7 @@ class HistogramPlotterTest(unittest.TestCase):
                                          out_dir=out_dir,
                                          start_idx=0,
                                          end_idx=3,
-                                         keys=EverionKeys.major_mixed_vital_raw)
+                                         keys=everion_keys.MAJOR_MIXED_VITAL_RAW)
 
         files = list(out_dir.glob('**/*.png'))
         self.assertEqual(25, len(files))
@@ -69,7 +69,7 @@ class HistogramPlotterTest(unittest.TestCase):
         self.plotter.plot_histogram(out_dir=out_dir,
                                     patient_id='002',
                                     df=df,
-                                    keys=EverionKeys.all_vital)
+                                    keys=everion_keys.ALL_VITAL)
 
         files = list(out_dir.glob('**/*.png'))
         self.assertEqual(22, len(files))
@@ -83,7 +83,7 @@ class HistogramPlotterTest(unittest.TestCase):
                                          out_dir_suffix='_histograms')
         self.plotter.plot_histogram(in_dir=in_dir,
                                     out_dir=out_dir,
-                                    keys=EverionKeys.all_vital)
+                                    keys=everion_keys.ALL_VITAL)
         self.assertTrue(True)
 
 
@@ -100,7 +100,7 @@ class HistogramPlotterTest(unittest.TestCase):
                                          out_dir=out_dir,
                                          start_idx=15,
                                          end_idx=39,
-                                         keys=EverionKeys.major_mixed_vital_raw)
+                                         keys=everion_keys.MAJOR_MIXED_VITAL_RAW)
         self.assertTrue(True)
 
 

@@ -1,14 +1,13 @@
-import glob
 import os
+import glob
 import unittest
+import numpy as np
 
 from utils.data_aggregator import DataAggregator, Normalization
 from visualization.vis_properties import VisProperties
 from patient.patient_data_loader import PatientDataLoader
-from utils.everion_keys import EverionKeys
-import numpy as np
-
 from utils.file_helper import FileHelper
+from utils import everion_keys
 
 _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')
@@ -45,8 +44,8 @@ class DataAggregatorTest(unittest.TestCase):
         if not df.empty:
             properties = VisProperties(in_dir=self.in_dir, out_dir='',
                                        normalization=Normalization.NONE,
-                                       keys=EverionKeys.major_vital,
-                                       short_keys=EverionKeys.short_names_vital,
+                                       keys=everion_keys.MAJOR_VITAL,
+                                       short_keys=everion_keys.SHORT_NAMES_VITAL,
                                        min_scale=0, max_scale=100,
                                        start_idx=0, end_idx=3)
             df_a = self.aggregator.aggregate_data_hourly(df=df,

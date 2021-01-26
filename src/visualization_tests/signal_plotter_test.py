@@ -3,9 +3,9 @@ import os
 import shutil
 import unittest
 
-from utils.everion_keys import EverionKeys
 from visualization.signal_plotter import SignalPlotter
 from utils.file_helper import FileHelper
+from utils import everion_keys
 
 _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')
@@ -56,7 +56,7 @@ class SignalPlotterTest(unittest.TestCase):
         out_dir = FileHelper.get_out_dir(in_dir=dir_name,
                                          out_dir=self.out_dir,
                                          out_dir_suffix='_signals')
-        signals = EverionKeys.major_vital
+        signals = everion_keys.MAJOR_VITAL
         for signal in signals:
             print('processing ', signal, ' ...')
             self.plotter.plot_signal(in_dir=dir_name,

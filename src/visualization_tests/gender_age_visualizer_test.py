@@ -4,8 +4,8 @@ import unittest
 
 from visualization.gender_age_visualizer import GenderAgeVisualizer
 from patient.patient_data_loader import PatientDataLoader
-from utils.everion_keys import EverionKeys
 from utils.file_helper import FileHelper
+from utils import everion_keys
 
 _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')
@@ -31,8 +31,8 @@ class GenderVisualizerTest(unittest.TestCase):
                           start_idx=0,
                           end_idx=3,
                           lookup_table=lookup_table,
-                          keys=EverionKeys.major_vital,
-                          short_keys=EverionKeys.short_names_vital)
+                          keys=everion_keys.MAJOR_VITAL,
+                          short_keys=everion_keys.SHORT_NAMES_VITAL)
 
         files = list(out_dir.glob('**/*.png'))
         self.assertEqual(1, len(files))
@@ -53,8 +53,8 @@ class GenderVisualizerTest(unittest.TestCase):
                           start_idx=0,
                           end_idx=3,
                           lookup_table=lookup_table,
-                          keys=EverionKeys.major_vital,
-                          short_keys=EverionKeys.short_names_vital)
+                          keys=everion_keys.MAJOR_VITAL,
+                          short_keys=everion_keys.SHORT_NAMES_VITAL)
 
         files = list(out_dir.glob('**/*.png'))
         self.assertEqual(1, len(files))
@@ -75,8 +75,8 @@ class GenderVisualizerTest(unittest.TestCase):
                           start_idx=0,
                           end_idx=3,
                           lookup_table=lookup_table,
-                          keys=EverionKeys.major_mixed_vital_raw,
-                          short_keys=EverionKeys.short_names_mixed_vital_raw)
+                          keys=everion_keys.MAJOR_MIXED_VITAL_RAW,
+                          short_keys=everion_keys.SHORT_NAMES_MIXED_VITAL_RAW)
 
         files = list(out_dir.glob('**/*.png'))
         self.assertEqual(1, len(files))

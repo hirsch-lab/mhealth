@@ -6,8 +6,8 @@ import os
 from utils.data_aggregator import Normalization
 from visualization.plotter import Plotter
 from visualization.vis_properties import VisProperties
-from utils.everion_keys import EverionKeys
 from utils.file_helper import FileHelper
+from utils import everion_keys
 
 _MHEALTH_DATA = os.getenv("MHEALTH_DATA", "../resources")
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')
@@ -25,8 +25,8 @@ class PlotterTest(unittest.TestCase):
                                          out_dir_suffix='_hourly_lines2')
         props = VisProperties(in_dir=self.in_dir, out_dir=out_dir,
                               normalization=Normalization.NONE,
-                              keys=EverionKeys.major_vital,
-                              short_keys=EverionKeys.short_names_vital,
+                              keys=everion_keys.MAJOR_VITAL,
+                              short_keys=everion_keys.SHORT_NAMES_VITAL,
                               min_scale=0, max_scale=100,
                               start_idx=0, end_idx=3)
         self.plotter.plot_hourly_lines_subplots(properties=props)
@@ -41,8 +41,8 @@ class PlotterTest(unittest.TestCase):
                                          out_dir_suffix='_hourly_lines')
         props = VisProperties(in_dir=self.in_dir, out_dir=out_dir,
                               normalization=Normalization.NONE,
-                              keys=EverionKeys.major_vital,
-                              short_keys=EverionKeys.short_names_vital,
+                              keys=everion_keys.MAJOR_VITAL,
+                              short_keys=everion_keys.SHORT_NAMES_VITAL,
                               min_scale=0, max_scale=100,
                               start_idx=0, end_idx=3)
         self.plotter.plot_hourly_lines(properties=props)
@@ -78,7 +78,7 @@ class PlotterTest(unittest.TestCase):
         self.plotter.plot_patient_mixed_vital_raw(in_dir=in_dir,
                                                   out_dir=out_dir,
                                                   in_file_name=filename,
-                                                  keys=EverionKeys.major_mixed_vital_raw,
+                                                  keys=everion_keys.MAJOR_MIXED_VITAL_RAW,
                                                   start_idx=0,
                                                   end_idx=3)
 
@@ -118,7 +118,7 @@ class PlotterTest(unittest.TestCase):
             self.plotter.plot_patient_mixed_vital_raw(in_dir=in_dir,
                                                       out_dir=out_dir,
                                                       in_file_name=filename,
-                                                      keys=EverionKeys.major_imove,
+                                                      keys=everion_keys.MAJOR_IMOVE,
                                                       start_idx=0,
                                                       end_idx=3)
         files = list(out_dir.glob('**/*.png'))
@@ -157,7 +157,7 @@ class PlotterTest(unittest.TestCase):
             self.plotter.plot_patient_mixed_vital_raw(in_dir=in_dir,
                                                       out_dir=out_dir,
                                                       in_file_name=filename,
-                                                      keys=EverionKeys.major_imove,
+                                                      keys=everion_keys.MAJOR_IMOVE,
                                                       start_idx=0,
                                                       end_idx=3)
 
@@ -170,8 +170,8 @@ class PlotterTest(unittest.TestCase):
                                          out_dir_suffix='_hourly_lines')
         props = VisProperties(in_dir=in_dir, out_dir=out_dir,
                               normalization=Normalization.NONE,
-                              keys=EverionKeys.major_vital,
-                              short_keys=EverionKeys.short_names_vital,
+                              keys=everion_keys.MAJOR_VITAL,
+                              short_keys=everion_keys.SHORT_NAMES_VITAL,
                               min_scale=0, max_scale=100,
                               start_idx=0, end_idx=3)
         self.plotter.plot_hourly_lines(properties=props)
@@ -185,8 +185,8 @@ class PlotterTest(unittest.TestCase):
                                          out_dir_suffix='_label_plots')
         props = VisProperties(in_dir=in_dir, out_dir=out_dir,
                               normalization=Normalization.NONE,
-                              keys=EverionKeys.major_vital,
-                              short_keys=EverionKeys.short_names_vital,
+                              keys=everion_keys.MAJOR_VITAL,
+                              short_keys=everion_keys.SHORT_NAMES_VITAL,
                               min_scale=0, max_scale=100,
                               start_idx=0, end_idx=3
                               )

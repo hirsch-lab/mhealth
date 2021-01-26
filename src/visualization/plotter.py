@@ -7,8 +7,8 @@ import pandas as pd
 
 from patient.patient_data_loader import PatientDataLoader
 from utils.data_aggregator import DataAggregator
-from utils.everion_keys import EverionKeys
 from utils.plotter_helper import PlotterHelper
+from utils import everion_keys
 
 sns.set()
 
@@ -70,7 +70,7 @@ class Plotter:
         self.plot_keys(df, patient_id, os.path.join(out_dir_subset, patient_id + '_subset' + '.png'), keys)
 
     def generate_all_plots(self, df, out_dir_all, patient_id):
-        self.plot_keys(df, patient_id, os.path.join(out_dir_all, patient_id + '_all' + '.png'), EverionKeys.all_vital)
+        self.plot_keys(df, patient_id, os.path.join(out_dir_all, patient_id + '_all' + '.png'), everion_keys.ALL_VITAL)
 
     def generate_quality_plots(self, df, out_dir_quality, patient_id):
         keys = {'core_temperature_quality', 'respiration_rate_quality', 'heart_rate_variability_quality',
