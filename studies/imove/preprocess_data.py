@@ -81,7 +81,8 @@ def preprocess(data_dir, labels_dir, out_dir, col_lookup_file, quality):
         merge_labels(df=df, df_labels=df_labels)
         if True:
             FileHelper.get_out_dir(out_dir=out_dir)
-            df.to_csv(out_path)
+            df["timestamp"] = df["timestamp"].dt.tz_convert("UTC")
+            df.to_csv(out_path, sep=";", index=False)
 
 
 def print_title(title, width=80):
