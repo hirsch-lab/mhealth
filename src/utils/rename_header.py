@@ -4,7 +4,7 @@ from utils import everion_keys
 
 def rename_headers_inplace(df, keys):
     """
-    In-place renaming
+    In-place renaming and formatting.
     """
     df.rename(columns=keys, inplace=True)
     df["timestamp"] = pd.to_datetime(df["timestamp"]).dt.tz_convert("UTC")
@@ -13,10 +13,8 @@ def rename_headers_inplace(df, keys):
 
 class RenameHeader:
     """
-    Legacy.
+    Legacy
     """
-    keys = everion_keys
-
     def renaming(self, df, keys, patient_id, out_dir):
         rename_headers_inplace(df=df, keys=keys)
         df.to_csv(Path(out_dir, "Renamed_Header_" + patient_id + ".csv"))
