@@ -1,31 +1,32 @@
-2,      HR
-4,      HRQ
-6,      SPo2
-8,      SPO2Q
-10,     BloodPressure
-14,     BloodPerfusion
-18,     Activity
-20,     Classification
-22,     QualityClassification
-24,     steps
-26,     Energy
-28,     RespRate
-29,     HRV
-42,     phase
-44,     phase
-46,     localtemp
-48,     objtemp
-50,     baromtemp
-52,     pressure
-131,    SIGNAL
-30,     Dark
-31,     Green
-32,     Red
-33,     IR
-34,     AX
-35,     AY
-36,     AZ
-37,     greencurr
-38,     redcurr
-39,     IRcurr
-40,     ADCoffs
+2,HR,int16
+4,HRQ,int16
+6,SpO2,int16
+8,SpO2Q,int16
+10,BloodPressure,int16
+14,BloodPerfusion,float32
+18,Activity,float32
+20,Classification,int8
+22,QualityClassification,int8
+24,Steps,int16
+26,Energy,int16
+28,RespRate,int16
+29,HRV,int16
+42,Phase,float32
+44,PhaseInt,int32
+46,LocalTemp,float32
+48,ObjTemp,float32
+50,BaromTemp,float32
+52,Pressure,float32
+131,SIGNAL,
+30,Dark,float32
+31,Green,float32
+32,Red,float32
+33,IR,float32
+34,AX,float32
+35,AY,float32
+36,AZ,float32
+37,GreenCurr,float32
+38,RedCurr,float32
+39,IRCurr,float32
+40,ADCoeffs,float32
+timestamp,timestamp,"datetime64[ns, UTC]"
