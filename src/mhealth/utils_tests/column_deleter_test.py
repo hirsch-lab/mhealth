@@ -6,7 +6,7 @@ from utils.column_deleter import ColumnDeleter
 from utils.file_helper import FileHelper
 from patient.patient_data_loader import PatientDataLoader
 
-_MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../resources')
+_MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')
 
 

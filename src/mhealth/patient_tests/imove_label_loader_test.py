@@ -7,7 +7,7 @@ from utils.file_helper import FileHelper
 import pandas as pd
 import numpy as np
 
-_MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../resources')
+_MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')
 
 

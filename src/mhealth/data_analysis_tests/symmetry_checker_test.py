@@ -5,7 +5,7 @@ import unittest
 from data_analysis.symmetry_checker import SymmetryChecker
 from utils.file_helper import FileHelper
 
-_MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../resources')
+_MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')
 
 
