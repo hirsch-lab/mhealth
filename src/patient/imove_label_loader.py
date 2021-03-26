@@ -21,6 +21,7 @@ def load_labels(filepath, tz_to_zurich=True):
     header = df.iloc[0]
     df = df[1:]
     df.columns = header
+    df["Task"] = df["Task"].str.lower()
     df["start_date"] = pd.to_datetime(df.Date.astype(str) + " "
                                       + df.Start.astype(str))
     df["start_date"] = df["start_date"].dt.tz_localize("Europe/Zurich")
@@ -30,9 +31,9 @@ def load_labels(filepath, tz_to_zurich=True):
 
 def load_labels_for_patient(labels_dir, pat_id):
     labels_dir = Path(labels_dir)
-    df1 = load_labels(labels_dir / get_label_filename(1, pat_id))
-    df2 = load_labels(labels_dir / get_label_filename(2, pat_id))
-    df3 = load_labels(labels_dir / get_label_filename(3, pat_id))
+    df1 = load_labels(labels_dir / get_label_filename(day=1, pat_id=pat_id))
+    df2 = load_labels(labels_dir / get_label_filename(day=2, pat_id=pat_id))
+    df3 = load_labels(labels_dir / get_label_filename(day=3, pat_id=pat_id))
     df = pd.concat([df1, df2, df3], axis=0)
     return df
 
@@ -41,9 +42,10 @@ def merge_labels(df, df_labels):
     Modifies df in-place.
     """
     if not df.empty and not df_labels.empty:
-        df["de_morton_label"] = ""
-        df["de_morton"] = ""
+        df["DeMortonLabel"] = None
+        df["DeMorton"] = None
         df_labels.apply(lambda row: add_label(row, df), axis=1)
+    return df
 
 
 def add_label(label_row, df):
@@ -52,8 +54,8 @@ def add_label(label_row, df):
     label = label_row["Task"]
 
     sel = (df.timestamp >= start) & (df.timestamp <= end)
-    df.loc[sel, "de_morton_label"] = label
-    df.loc[sel, "de_morton"] = 1
+    df.loc[sel, "DeMortonLabel"] = label
+    df.loc[sel, "DeMorton"] = 1
 
 
 
@@ -89,9 +91,9 @@ class ImoveLabelLoader:
                 print("processing id: ", pat_id, " ...")
 
                 label_dir = Path(label_dir)
-                df1 = load_labels(label_dir / get_label_filename(1, pat_id))
-                df2 = load_labels(label_dir / get_label_filename(2, pat_id))
-                df3 = load_labels(label_dir / get_label_filename(3, pat_id))
+                df1 = load_labels(label_dir / get_label_filename(day=1, pat_id=pat_id))
+                df2 = load_labels(label_dir / get_label_filename(day=2, pat_id=pat_id))
+                df3 = load_labels(label_dir / get_label_filename(day=3, pat_id=pat_id))
 
                 filename = pat_id + "L" + in_file_suffix + ".csv"
                 self.create_labels(data_dir, out_dir, df1, df2, df3, filename)
@@ -103,8 +105,8 @@ class ImoveLabelLoader:
     def create_labels(self, data_dir, out_dir, df1, df2, df3, filename):
         df = self.loader.load_everion_patient_data(data_dir, filename, ";", True)
         if not df.empty:
-            df["de_morton_label"] = ""
-            df["de_morton"] = ""
+            df["DeMortonLabel"] = ""
+            df["DeMorton"] = ""
 
             if not df1.empty:
                 df1.apply(lambda row: add_label(row, df), axis=1)

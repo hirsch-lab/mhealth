@@ -59,13 +59,13 @@ class ImoveLabelLoaderTest(unittest.TestCase):
 
         df = pd.read_csv(os.path.join(out_dir, '123L_storage-vital.csv'), ';')
         self.assertEqual((64, 25), df.shape, 'df shape not matching')
-        self.assertTrue(np.isnan(df['de_morton'][0]))
-        self.assertEqual(1, df['de_morton'][1])
-        self.assertEqual(1, df['de_morton'][39])
-        self.assertEqual(1, df['de_morton'][57])
-        self.assertEqual('Temp', df['de_morton_label'][1])
-        self.assertEqual('3', df['de_morton_label'][39])
-        self.assertEqual('5A', df['de_morton_label'][57])
+        self.assertTrue(np.isnan(df['DeMorton'][0]))
+        self.assertEqual(1, df['DeMorton'][1])
+        self.assertEqual(1, df['DeMorton'][39])
+        self.assertEqual(1, df['DeMorton'][57])
+        self.assertEqual('temp', df['DeMortonLabel'][1])
+        self.assertEqual('3', df['DeMortonLabel'][39])
+        self.assertEqual('5a', df['DeMortonLabel'][57])
 
 
     @unittest.SkipTest
