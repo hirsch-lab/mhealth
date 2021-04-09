@@ -94,7 +94,8 @@ class Plotter:
         mdates = d.date2num(df['timestamp'])
 
         for key in keys:
-            plt.plot_date(mdates, df[key], tz=None, xdate=True, linewidth=0.5, linestyle='solid', marker='')
+            plt.plot_date(mdates, df[key], tz=None, xdate=True, linewidth=0.5,
+                          fmt="-")
 
         formatter = d.DateFormatter('%m/%d/%y %H:%M:%S')
         ax.xaxis.set_major_formatter(formatter)
