@@ -41,7 +41,7 @@ class ColumnDeleter:
             'greencurr',
             'redcurr',
             'IRcurr',
-            'ADCoffs',
+            'ADCoeffs',
             'timestamp']
 
             side = str(filename[29:30])

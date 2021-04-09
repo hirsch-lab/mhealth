@@ -68,7 +68,7 @@ class DataAggregatorTest(unittest.TestCase):
     def check_row_values(self, row, hr, hrv, spo2, t, rr):
         self.assertEqual(hr, row['HR'])
         self.assertEqual(hrv, row['HRV'])
-        self.assertEqual(spo2, row['SPO2'])
+        self.assertEqual(spo2, row['SpO2'])
         self.assertEqual(t, row['Temp'])
         self.assertEqual(rr, row['RR'])
 
@@ -76,7 +76,7 @@ class DataAggregatorTest(unittest.TestCase):
     def is_row_nan(self, nan_row):
         self.assertTrue(np.isnan(nan_row['HR']))
         self.assertTrue(np.isnan(nan_row['HRV']))
-        self.assertTrue(np.isnan(nan_row['SPO2']))
+        self.assertTrue(np.isnan(nan_row['SpO2']))
         self.assertTrue(np.isnan(nan_row['Temp']))
         self.assertTrue(np.isnan(nan_row['RR']))
 

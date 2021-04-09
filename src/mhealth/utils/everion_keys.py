@@ -54,7 +54,7 @@ Subset of vital parameters considered important (short names).
 Refers to code table: raw_data_data/usb/imove/data/iMove_00_data_info.txt
 """
 MAJOR_MIXED_VITAL_RAW = [
-    "HR", "HRV", "SPo2", "objtemp", "RespRate"
+    "HR", "HRV", "SpO2", "ObjTemp", "RespRate"
 ]
 
 
@@ -79,8 +79,8 @@ SHORT_NAMES_VITAL = {
     "heart_rate_variability_quality": "HRVQ",
     "motion_activity": "Motion",
     "number_of_steps": "Steps",
-    "oxygen_saturation": "SPO2",
-    "oxygen_saturation_quality": "SPO2Q",
+    "oxygen_saturation": "SpO2",
+    "oxygen_saturation_quality": "SpO2Q",
     "perfusion_index": "PI",
     "relax_stress_intensity_score": "RStressI",
     "respiration_rate": "RR",
@@ -99,7 +99,7 @@ assert set(ALL_VITAL) <= set(SHORT_NAMES_VITAL)
 """
 SHORT_NAMES_MIXED_VITAL_RAW = {
     "HR": "HR",
-    "SPo2": "SPO2",
+    "SpO2": "SpO2",
     "BloodPerfusion": "BPerf",
     "Activity": "A",
     "Classification": "AC",
@@ -107,15 +107,15 @@ SHORT_NAMES_MIXED_VITAL_RAW = {
     "HRV": "HRV",
     "RespRate": "RR",
     "Energy": "E",
-    "localtemp": "TmpL",
+    "LocalTemp": "TmpL",
     "HRQ": "HRQ",
-    "SPO2Q": "SPO2Q",
+    "SpO2Q": "SpO2Q",
     "BloodPressure": "BP",
-    "steps": "Steps",
-    "objtemp": "Temp",
-    "baromtemp": "TBaro",
-    "phase": "phase",
-    "pressure": "pressure",
+    "Steps": "Steps",
+    "ObjTemp": "Temp",
+    "BaromTemp": "TBaro",
+    "Phase": "Phase",
+    "Pressure": "Pressure",
 }
 
 
@@ -200,23 +200,23 @@ TODO: Unused variable. Remove?
 TAG_NAMES_MIXED_VITAL_RAW = {
     "2.1":  "HR",
     "4.1":  "HRQ",
-    "6.1":  "SPo2",
-    "8.1":  "SPO2Q",
+    "6.1":  "SpO2",
+    "8.1":  "SpO2Q",
     "10.1": "BloodPressure",
     "14.1": "BloodPerfusion",
     "18.1": "Activity",
     "20.1": "Classification",
     "22.1": "QualityClassification",
-    "24.1": "steps",
+    "24.1": "Steps",
     "26.1": "Energy",
     "28.1": "RespRate",
     "29.1": "HRV",
-    "42.1": "phase",
-    "44.1": "phase",
-    "46.1": "localtemp",
-    "48.1": "objtemp",
-    "50.1": "baromtemp",
-    "52.1": "pressure",
+    "42.1": "Phase",
+    "44.1": "PhaseInt",
+    "46.1": "LocalTemp",
+    "48.1": "ObjTemp",
+    "50.1": "BaromTemp",
+    "52.1": "Pressure",
 }
 
 
@@ -224,10 +224,10 @@ TAG_NAMES_MIXED_VITAL_RAW = {
 TODO: Unused variable. Remove?
 """
 ALL_SIGNALS_MIXED_VITAL_RAW = [
-    "HR", "HRQ", "SPo2", "SPO2Q", "BloodPressure",
+    "HR", "HRQ", "SpO2", "SpO2Q", "BloodPressure",
     "BloodPerfusion", "Activity", "Classification",
-    "QualityClassification", "steps", "Energy", "RespRate",
-    "HRV", "phase", "phase", "localtemp", "objtemp", "baromtemp", "pressure"
+    "QualityClassification", "Steps", "Energy", "RespRate",
+    "HRV", "Phase", "PhaseInt", "LocalTemp", "ObjTemp", "BaromTemp", "Pressure"
 ]
 
 
@@ -235,8 +235,8 @@ ALL_SIGNALS_MIXED_VITAL_RAW = [
 TODO: Unused variable. Remove?
 """
 MEDIUM_MIXED_VITAL_RAW = [
-    "HR", "HRV", "SPo2", "BloodPressure", "Activity",
-    "Classification", "steps", "Energy", "RespRate"
+    "HR", "HRV", "SpO2", "BloodPressure", "Activity",
+    "Classification", "Steps", "Energy", "RespRate"
 ]
 
 

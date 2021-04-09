@@ -21,7 +21,7 @@ class GenderAgeVisualizer:
 
         df = df.mean(numeric_only=True)
 
-        df_row = pd.DataFrame({'RR': df.RR, 'SPO2': df.SPO2, 'HR': df.HR,
+        df_row = pd.DataFrame({'RR': df.RR, 'SpO2': df.SpO2, 'HR': df.HR,
                                'HRV': df.HRV, 'Temp': df.Temp, 'Age': age,
                                'Gender': gender, 'PID': pid}, index=[0])
 
@@ -57,7 +57,7 @@ class GenderAgeVisualizer:
 
 
     def plot_data(self, in_dir, out_dir, start_idx, end_idx, lookup_table, keys, short_keys):
-        column_names = ['RR', 'SPO2', 'HR', 'HRV', 'Temp', 'Age', 'Gender', 'PID']
+        column_names = ['RR', 'SpO2', 'HR', 'HRV', 'Temp', 'Age', 'Gender', 'PID']
         combined_df = pd.DataFrame(columns=column_names)
         loader = PatientDataLoader()
         for filename in os.listdir(in_dir):

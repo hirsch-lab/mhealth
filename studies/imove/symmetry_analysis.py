@@ -10,10 +10,10 @@ data_dir = data_root / "studies/usb-imove/processed_data/cleaned_data/"
 data_dir = data_dir / "cleaned2_labeled_quality_filtered_50"
 out_dir = "./results/symmetry-new"
 
-#columns = ["HR"]
-columns = ["HR", "HRQ", "HRV", "RespRate",
-           "SPo2", "BloodPressure",
-           "Activity", "Classification"]
+    #columns = ["HR"]
+    columns = ["HR", "HRQ", "HRV", "RespRate",
+               "SpO2", "BloodPressure",
+               "Activity", "Classification"]
 
 check = SymmetryChecker(data_dir=data_dir,
                         out_dir=out_dir,

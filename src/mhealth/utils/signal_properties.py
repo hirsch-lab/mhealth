@@ -25,7 +25,7 @@ class SignalProperties:
         # according to USB: 37.5
         'Temp': {'min_scale': np.nan, 'max_scale': np.nan, 'expected_min': np.nan, 'expected_max': np.nan, 'color_map': diverging},
         # according to USB: 95-100%
-        'SPO2': {'min_scale': 80, 'max_scale': 100, 'expected_min': 95, 'expected_max': 100, 'color_map': sequential2},
+        'SpO2': {'min_scale': 80, 'max_scale': 100, 'expected_min': 95, 'expected_max': 100, 'color_map': sequential2},
         # according to USB: HR : 60-80
         'HR': {'min_scale': np.nan, 'max_scale': np.nan, 'expected_min': 60, 'expected_max': 80, 'color_map': diverging},
         # according to USB: HRV: RMSSD altersabhängig ca. 25 bei 50 jährigen und 20 bei 80 jährigen

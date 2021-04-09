@@ -53,10 +53,10 @@ def filter_bad_quality_mixed_vital_raw(df, min_quality):
     Filter data selected by everion_keys.MIX
     """
     filter_quality(df, min_quality, 'Classification', 'QualityClassification')
-    filter_quality(df, min_quality, 'SPo2', 'SPO2Q')
+    filter_quality(df, min_quality, 'SpO2', 'SpO2Q')
 
     # Quality signals omitted to remember original quality.
-    quality_cols = ["HRQ", "SPo2Q", "QualityClassification", "timestamp"]
+    quality_cols = ["HRQ", "SpO2Q", "QualityClassification", "timestamp"]
     filter_quality_except(df, min_quality, quality_cols, 'HRQ')
 
 

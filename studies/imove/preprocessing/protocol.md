@@ -32,3 +32,17 @@ I decided to go with (1), assuming that the data in the correct format is correc
     - `iMove_051_storage-vital_raw__left.csv`
     - `iMove_051_storage-vital_raw__right.csv`
     - `iMove_052_storage-vital_raw__left.csv`
+- Renamed original column names to make the naming more consistent
+    - SPo2 → SpO2
+    - SPO2Q → SpO2Q
+    - steps → Steps
+    - phase → Phase
+    - phase → PhaseInt
+    - localtemp → LocalTemp
+    - objtemp → ObjTemp
+    - baromtemp → BaromTemp
+    - pressure → Pressure
+    - greencurr → GreenCurr
+    - redcurr → RedCurr
+    - IRcurr → IRCurr
+    - ADCoffs → ADCoeffs

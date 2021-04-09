@@ -20,12 +20,12 @@ class SanityChecker:
                                  'timestamp_min', 'timestamp_max', 'hours',
                                  'HR_mean', 'HR_std', 'HR_min', 'HR_max',
                                  'HRV_mean', 'HRV_std', 'HRV_min', 'HRV_max',
-                                 'Spo2_mean', 'Spo2_std', 'Spo2_min', 'Spo2_max',
+                                 'SpO2_mean', 'SpO2_std', 'SpO2_min', 'SpO2_max',
                                  'RR_mean', 'RR_std', 'RR_min', 'RR_max',
                                  'T_mean', 'T_std', 'T_min', 'T_max',
                                  'HR_q_mean', 'HR_q_std', 'HR_q_min', 'HR_q_max',
                                  'HRV_q_mean', 'HRV_q_std', 'HRV_q_min', 'HRV_q_max',
-                                 'Spo2_q_mean', 'Spo2_q_std', 'Spo2_q_min', 'Spo2_q_max',
+                                 'SpO2_q_mean', 'SpO2_q_std', 'SpO2_q_min', 'SpO2_q_max',
                                  'RR_q_mean', 'RR_q_std', 'RR_q_min', 'RR_q_max',
                                  'T_q_mean', 'T_q_std', 'T_q_min', 'T_q_max',
                                  'AC_q_mean', 'AC_q_std', 'AC_q_min', 'AC_q_max',
@@ -249,7 +249,7 @@ class SanityChecker:
                         hrv_max = self.get_max(df, key)
                         hrv_std = self.get_std(df, key)
 
-                        key = 'SPo2'
+                        key = 'SpO2'
                         spo2_mean = self.get_mean(df, key)
                         spo2_min = self.get_min(df, key)
                         spo2_max = self.get_max(df, key)
@@ -261,7 +261,7 @@ class SanityChecker:
                         rr_max = self.get_max(df, key)
                         rr_std = self.get_std(df, key)
 
-                        key = 'objtemp'
+                        key = 'ObjTemp'
                         t_mean = self.get_mean(df, key)
                         t_min = self.get_min(df, key)
                         t_max = self.get_max(df, key)
@@ -273,7 +273,7 @@ class SanityChecker:
                         hr_q_max = self.get_max(df, key)
                         hr_q_std = self.get_std(df, key)
 
-                        key = 'SPO2Q'
+                        key = 'SpO2Q'
                         spo2_q_mean = self.get_mean(df, key)
                         spo2_q_min = self.get_min(df, key)
                         spo2_q_max = self.get_max(df, key)
@@ -320,7 +320,7 @@ class SanityChecker:
                                  'A_mean', 'A_std', 'A_min', 'A_max',
                                  'AC_mean', 'AC_std', 'AC_min', 'AC_max',
                                  'HR_q_mean', 'HR_q_std', 'HR_q_min', 'HR_q_max',
-                                 'Spo2_q_mean', 'Spo2_q_std', 'Spo2_q_min', 'Spo2_q_max',
+                                 'SpO2_q_mean', 'SpO2_q_std', 'SpO2_q_min', 'SpO2_q_max',
                                  'AC_q_mean', 'AC_q_std', 'AC_q_min', 'AC_q_max'
                                  ])
 
@@ -400,7 +400,7 @@ class SanityChecker:
             hr_q_max = self.get_max(df, key)
             hr_q_std = self.get_std(df, key)
 
-            key = 'SPO2Q'
+            key = 'SpO2Q'
             spo2_q_mean = self.get_mean(df, key)
             spo2_q_min = self.get_min(df, key)
             spo2_q_max = self.get_max(df, key)

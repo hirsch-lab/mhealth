@@ -127,7 +127,7 @@ class Plotter:
 
 
     def custom_line_plot(self, ax, custom_plot_fct, df_hm, font_size, x, x_daily_lines, x_ticks):
-        color_dict = {'HR': 'limegreen', 'HRV': 'silver', 'RR': 'yellow', 'SPO2': 'deepskyblue', 'Temp': 'white'}
+        color_dict = {'HR': 'limegreen', 'HRV': 'silver', 'RR': 'yellow', 'SpO2': 'deepskyblue', 'Temp': 'white'}
         ax0 = df_hm.plot(xticks=x_ticks, figsize=(15,3), color=[color_dict.get(x, '#333333') for x in df_hm.columns])
         ax0.set_facecolor('dimgray')
         plt.grid(color='silver', linestyle='--', linewidth=0.7)
@@ -172,7 +172,7 @@ class Plotter:
 
             df_l = self.loader.load_everion_patient_data(properties.in_dir, filename_l, ';')
             df_r = self.loader.load_everion_patient_data(properties.in_dir, filename_r, ';')
-            keys = ['HR', 'de_morton', 'de_morton_label']
+            keys = ['HR', 'DeMorton', 'DeMortonLabel']
 
             if not df_l.empty:
                 df_left = df_l.set_index("timestamp")
@@ -201,7 +201,7 @@ class Plotter:
             df['timestamp'] = df['timestamp'].dt.tz_convert('UTC')
             mdates = d.date2num(df['timestamp'])
             plt.plot_date(mdates, df['HR'], tz='UTC', xdate=True, linewidth=0.5, linestyle='solid', marker='')
-            plt.plot_date(mdates, df['de_morton'], tz='UTC', xdate=True, marker='.', markeredgecolor='k', markerfacecolor='k')
+            plt.plot_date(mdates, df['DeMorton'], tz='UTC', xdate=True, marker='.', markeredgecolor='k', markerfacecolor='k')
 
             formatter = d.DateFormatter('%d.%m. %H:%M:%S')
             ax.xaxis.set_major_formatter(formatter)

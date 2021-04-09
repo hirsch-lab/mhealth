@@ -63,7 +63,7 @@ class SymmetryChecker:
     def _load_data(self, file_left, file_right):
         def cols_filter(x):
             # Ensure only columns with dtype float.
-            return x not in ["de_morton_label"]
+            return x not in ["DeMortonLabel"]
         from collections import defaultdict
         dtypes = defaultdict(lambda: float)
         dtypes["timestamp"] = str
@@ -77,8 +77,8 @@ class SymmetryChecker:
                                                           csv_delimiter=';',
                                                           usecols=cols_filter,
                                                           dtype=dtypes)
-        has_morton = ("de_morton" in df_left) and ("de_morton" in df_right)
-        read_columns = (self._columns+["de_morton"]) if has_morton else self._columns
+        has_morton = ("DeMorton" in df_left) and ("DeMorton" in df_right)
+        read_columns = (self._columns+["DeMorton"]) if has_morton else self._columns
         df_left = df_left.set_index("timestamp")
         df_right = df_right.set_index("timestamp")
         df_left = df_left[read_columns]
@@ -94,8 +94,8 @@ class SymmetryChecker:
         if self._resample is not None:
             # This introduces a FIXED sampling pattern!
             df = df.resample(self._resample).mean()
-            if "de_morton" in df:
-                df["de_morton"] = df["de_morton"] > 0.5
+            if "DeMorton" in df:
+                df["DeMorton"] = df["DeMorton"] > 0.5
         return df
 
 
@@ -133,8 +133,8 @@ class SymmetryChecker:
         h_zeros = ax.scatter(x_zr, y_off(x_zr, -offset_miss), c="pink", alpha=0.2)
 
         h_morton = None
-        if "de_morton" in df:
-            mask_morton = df["de_morton"].any(axis=1)
+        if "DeMorton" in df:
+            mask_morton = df["DeMorton"].any(axis=1)
             mm = mask_morton[~mask]
             x_morton = avg[mm]
             y_morton = diff[mm]
