@@ -207,7 +207,7 @@ class IOManager:
         # Info related
         self._info_patterns = info_patterns
         self._info_transformers = info_transformers
-        # Target related
+        # Target related
         self._targets = [targets] if isinstance(targets, str) else targets
         self._target_writers = _ensure_dict(target_writers, default={})
         self._target_names = _ensure_dict(target_names, default={})

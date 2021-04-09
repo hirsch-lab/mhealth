@@ -100,8 +100,8 @@ class TestIOManager(unittest.TestCase):
         targets = [".csv", ".h5"]
         target_writers = {".csv": write_csv, ".h5":  write_hdf}
         target_names = {".csv": "{name}_{info1}{info3:03d}.csv"}
-        # The target name, if not specified, is by default: {name}.{key}
-        # For instance: target_names[".h5"] = "{name}.h5"
+        # The target name, if not specified, is by default: {name}.{key}
+        # For instance: target_names[".h5"] = "{name}.h5"
         iom = IOManager(out_dir=self.out_dir,
                         targets=None, # infer targets
                         info_patterns=info_patterns,

@@ -98,7 +98,7 @@ def fix_shifted_columns(df_raw, how):
         timestamp_col = list(lookup.values()).index(timestamp_col0)
         timestamp_col = list(lookup.keys())[timestamp_col]
         times = df_raw.loc[mask, timestamp_col].unique()
-        # Mask 1
+        # Mask 1
         df_raw = df_raw[~mask].copy()
         # Mask 2
         mask2 = df_raw[timestamp_col0].isin(times)

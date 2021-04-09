@@ -1,4 +1,4 @@
-## Data preprocessing
+## Data preprocessing
 
 - Two different types of readouts are available: the readouts of vital signals (sampling at 1Hz), and the raw sensor data (sampling at 50Hz). The latter includes also data from the optical sensors for the PPG (photoplethysmogram, pulse oximetry). Several vital signs are derived from those optical signals.
 - Our analyses assume that the computation of heart rate, oxygen saturation and other PPG-derived measures were performed correctly. The raw data is used only to read out accelerometer data.
