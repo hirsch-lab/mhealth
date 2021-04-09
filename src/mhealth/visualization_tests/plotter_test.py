@@ -1,13 +1,13 @@
+import os
 import glob
 import shutil
 import unittest
-import os
 
-from utils.data_aggregator import Normalization
-from visualization.plotter import Plotter
-from visualization.vis_properties import VisProperties
-from utils.file_helper import FileHelper
-from utils import everion_keys
+from ..utils import everion_keys
+from ..utils.file_helper import FileHelper
+from ..utils.data_aggregator import Normalization
+from ..visualization.vis_properties import VisProperties
+from ..visualization.plotter import Plotter
 
 _MHEALTH_DATA = os.getenv("MHEALTH_DATA", "../resources")
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')

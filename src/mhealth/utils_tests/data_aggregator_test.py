@@ -3,11 +3,11 @@ import glob
 import unittest
 import numpy as np
 
-from utils.data_aggregator import DataAggregator, Normalization
-from visualization.vis_properties import VisProperties
-from patient.patient_data_loader import PatientDataLoader
-from utils.file_helper import FileHelper
-from utils import everion_keys
+from ..utils import everion_keys
+from ..utils.file_helper import FileHelper
+from ..utils.data_aggregator import DataAggregator, Normalization
+from ..patient.patient_data_loader import PatientDataLoader
+from ..visualization.vis_properties import VisProperties
 
 _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')

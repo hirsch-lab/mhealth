@@ -1,15 +1,13 @@
 import os
-
 import numpy as np
 import pandas as pd
 import seaborn as sns
-
-from utils.data_aggregator import DataAggregator
-from patient.patient_data_loader import PatientDataLoader
-from utils.plotter_helper import PlotterHelper
-from utils.signal_properties import SignalProperties
-
 import matplotlib.pyplot as plt
+
+from ..utils.plotter_helper import PlotterHelper
+from ..utils.data_aggregator import DataAggregator
+from ..utils.signal_properties import SignalProperties
+from ..patient.patient_data_loader import PatientDataLoader
 
 sns.set()
 
@@ -122,7 +120,7 @@ class BarChartsPlotter:
         # Exact positions of rounded labels
         y_ticks = y_ticks_labels - centers[key]
         # Set tick positions and labels together (issues a warning otherwise).
-        # https://github.com/matplotlib/matplotlib/issues/18848
+        # https://github.com/matplotlib/matplotlib/issues/18848
         ax.set_yticks(y_ticks)
         ax.set_yticklabels(y_ticks_labels)
 

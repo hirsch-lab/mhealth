@@ -1,14 +1,13 @@
 # Heat map
 import os
-
-import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+import matplotlib.pyplot as plt
 
-from utils.data_aggregator import DataAggregator
-from patient.patient_data_loader import PatientDataLoader
-from utils.plotter_helper import PlotterHelper
-from utils.signal_properties import SignalProperties
+from ..utils.plotter_helper import PlotterHelper
+from ..utils.data_aggregator import DataAggregator
+from ..utils.signal_properties import SignalProperties
+from ..patient.patient_data_loader import PatientDataLoader
 
 sns.set()
 

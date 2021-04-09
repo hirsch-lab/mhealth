@@ -2,7 +2,9 @@ import shutil
 import unittest
 import tempfile
 from pathlib import Path
-from utils.io_manager import IOManager, extract_infos
+
+from ..utils.io_manager import IOManager, extract_infos
+
 
 def write_csv(data, out_path):
     #print("Writing CSV %s..." % out_path)

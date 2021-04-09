@@ -1,12 +1,12 @@
-import glob
 import os
+import glob
 import shutil
 import unittest
 
-from visualization.histogram_plotter import HistogramPlotter
-from patient.patient_data_loader import PatientDataLoader
-from utils.file_helper import FileHelper
-from utils import everion_keys
+from ..utils import everion_keys
+from ..utils.file_helper import FileHelper
+from ..patient.patient_data_loader import PatientDataLoader
+from ..visualization.histogram_plotter import HistogramPlotter
 
 _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')

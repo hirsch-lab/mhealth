@@ -1,6 +1,6 @@
 import unittest
 
-from utils.rename_header import RenameHeader
+from ..utils.rename_header import RenameHeader
 
 
 class RenameHeaderTest(unittest.TestCase):

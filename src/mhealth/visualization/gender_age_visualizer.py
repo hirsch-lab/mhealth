@@ -1,10 +1,9 @@
 import os
-
-import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+import matplotlib.pyplot as plt
 
-from patient.patient_data_loader import PatientDataLoader
+from ..patient.patient_data_loader import PatientDataLoader
 
 sns.set()
 

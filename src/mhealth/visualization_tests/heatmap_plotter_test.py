@@ -1,13 +1,13 @@
-import glob
 import os
+import glob
 import shutil
 import unittest
 
-from utils.data_aggregator import Normalization
-from visualization.heatmap_plotter import HeatmapPlotter
-from visualization.vis_properties import VisProperties
-from utils.file_helper import FileHelper
-from utils import everion_keys
+from ..utils import everion_keys
+from ..utils.file_helper import FileHelper
+from ..utils.data_aggregator import Normalization
+from ..visualization.heatmap_plotter import HeatmapPlotter
+from ..visualization.vis_properties import VisProperties
 
 _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')

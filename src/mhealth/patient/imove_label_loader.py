@@ -3,7 +3,7 @@ import pandas as pd
 from pathlib import Path
 from natsort import natsort
 
-from patient.patient_data_loader import PatientDataLoader
+from .patient_data_loader import PatientDataLoader
 
 
 def get_label_filename(day, pat_id):

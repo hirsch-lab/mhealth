@@ -9,10 +9,9 @@ from pathlib import Path
 from codetiming import Timer
 
 import context
-from utils.file_helper import FileHelper
-from utils.io_manager import IOManager
-from data_analysis.quality_filter import filter_bad_quality_mixed_vital_raw
-from patient.imove_label_loader import load_labels_for_patient, merge_labels
+from mhealth.utils import FileHelper, IOManager
+from mhealth.data_analysis import filter_bad_quality_mixed_vital_raw
+from mhealth.patient import load_labels_for_patient, merge_labels
 
 # Preprocessing:
 #   - read data

@@ -1,11 +1,11 @@
 import os
 import unittest
-
-from patient.imove_label_loader import ImoveLabelLoader
-from utils.file_helper import FileHelper
-
-import pandas as pd
 import numpy as np
+import pandas as pd
+
+from ..utils.file_helper import FileHelper
+from ..patient.imove_label_loader import ImoveLabelLoader
+
 
 _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')

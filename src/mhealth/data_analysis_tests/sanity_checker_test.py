@@ -1,9 +1,8 @@
 import os
 import unittest
-
 import pandas as pd
 
-from data_analysis.sanity_checker import SanityChecker
+from ..data_analysis.sanity_checker import SanityChecker
 
 _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')

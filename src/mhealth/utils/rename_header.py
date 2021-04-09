@@ -1,6 +1,8 @@
 import pandas as pd
 from pathlib import Path
-from utils import everion_keys
+
+from . import everion_keys
+
 
 def rename_headers_inplace(df, keys):
     """

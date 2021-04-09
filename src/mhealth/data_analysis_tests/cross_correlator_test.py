@@ -1,12 +1,12 @@
-import glob
 import os
+import glob
 import unittest
 
-from data_analysis.cross_correlator import CrossCorrelator
-from utils.data_aggregator import Normalization
-from visualization.vis_properties import VisProperties
-from utils.file_helper import FileHelper
-from utils import everion_keys
+from ..utils import everion_keys
+from ..utils.file_helper import FileHelper
+from ..utils.data_aggregator import Normalization
+from ..visualization.vis_properties import VisProperties
+from ..data_analysis.cross_correlator import CrossCorrelator
 
 _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')

@@ -5,7 +5,7 @@ from enum import Enum
 import numpy as np
 import pandas as pd
 
-from patient.patient_data_loader import PatientDataLoader
+from ..patient.patient_data_loader import PatientDataLoader
 
 
 class DataAggregator:

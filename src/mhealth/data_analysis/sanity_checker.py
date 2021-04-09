@@ -4,7 +4,7 @@ import pandas as pd
 
 import natsort
 
-from patient.patient_data_loader import PatientDataLoader
+from ..patient.patient_data_loader import PatientDataLoader
 
 
 class SanityChecker:

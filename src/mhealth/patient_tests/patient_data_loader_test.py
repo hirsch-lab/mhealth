@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from patient.patient_data_loader import PatientDataLoader
+from ..patient.patient_data_loader import PatientDataLoader
 
 _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 

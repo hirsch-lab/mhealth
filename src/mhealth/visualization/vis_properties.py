@@ -1,7 +1,7 @@
 import string
 from dataclasses import dataclass
 
-from utils.data_aggregator import Normalization
+from ..utils.data_aggregator import Normalization
 
 
 @dataclass

@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
-from utils.data_aggregator import DataAggregator
-from patient.patient_data_loader import PatientDataLoader
-from utils.plotter_helper import PlotterHelper
+from ..utils.data_aggregator import DataAggregator
+from ..patient.patient_data_loader import PatientDataLoader
+from ..utils.plotter_helper import PlotterHelper
 
 sns.set()
 

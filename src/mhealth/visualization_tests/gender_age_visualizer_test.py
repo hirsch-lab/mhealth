@@ -1,11 +1,11 @@
-import glob
 import os
+import glob
 import unittest
 
-from visualization.gender_age_visualizer import GenderAgeVisualizer
-from patient.patient_data_loader import PatientDataLoader
-from utils.file_helper import FileHelper
-from utils import everion_keys
+from ..utils import everion_keys
+from ..utils.file_helper import FileHelper
+from ..patient.patient_data_loader import PatientDataLoader
+from ..visualization.gender_age_visualizer import GenderAgeVisualizer
 
 _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')

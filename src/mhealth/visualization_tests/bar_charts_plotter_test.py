@@ -2,11 +2,11 @@ import glob
 import os
 import unittest
 
-from utils.data_aggregator import Normalization
-from visualization.bar_charts_plotter import BarChartsPlotter
-from visualization.vis_properties import VisProperties
-from utils.file_helper import FileHelper
-from utils import everion_keys
+from ..utils import everion_keys
+from ..utils.file_helper import FileHelper
+from ..utils.data_aggregator import Normalization
+from ..visualization.vis_properties import VisProperties
+from ..visualization.bar_charts_plotter import BarChartsPlotter
 
 _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')

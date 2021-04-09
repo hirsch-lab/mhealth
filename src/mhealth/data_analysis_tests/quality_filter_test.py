@@ -1,11 +1,11 @@
+import os
 import shutil
 import unittest
-import os
 import numpy as np
 
-from data_analysis.quality_filter import QualityFilter
-from patient.patient_data_loader import PatientDataLoader
-from utils.file_helper import FileHelper
+from ..utils.file_helper import FileHelper
+from ..data_analysis.quality_filter import QualityFilter
+from ..patient.patient_data_loader import PatientDataLoader
 
 _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')

@@ -1,9 +1,8 @@
-from datetime import datetime
-
-from utils.signal_properties import SignalProperties
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from datetime import datetime
+from .signal_properties import SignalProperties
 
 
 class PlotterHelper:
