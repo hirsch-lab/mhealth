@@ -1,7 +1,8 @@
 """
 This script was used to process the Everion data received from
-University Hospital Basel
+University Hospital Basel.
 """
+
 import shutil
 import warnings
 import pandas as pd
@@ -180,6 +181,8 @@ def read_data(path, col_lookup, mode):
     #     df["timestamp"] = df["timestamp"].dt.tz_convert("UTC")
     df = df.astype(col_lookup["dtype"][col_lookup.index.isin(df.columns)])
     assert df["timestamp"].dtype == "datetime64[ns, UTC]"
+    col_diff = set(df.columns)-set(col_lookup.index)
+    assert len(col_diff)==0, ("Unknown columns occurred: %s" % col_diff)
     return df
 
 
@@ -209,14 +212,6 @@ def write_hdf(df, out_path, key=None, **kwargs):
 
 @Timer(text=_timer_format("filter quality"), logger=DEFAULT_LOGGER)
 def filter_by_quality(df, quality):
-    if quality is not None:
-        # In-place.
-        filter_bad_quality_mixed_vital_raw(df=df, min_quality=quality)
-    return df
-
-
-@Timer(text=_timer_format("filter quality"), logger=DEFAULT_LOGGER)
-def filter_quality(df, quality):
     if quality is not None:
         # In-place.
         filter_bad_quality_mixed_vital_raw(df=df, min_quality=quality)
@@ -281,85 +276,84 @@ def print_title(title, width=80):
 
 
 def run():
-    data_dir = "/Users/norman/workspace/education/phd/data/wearables/studies/usb-imove/raw_data"
-    labels_dir = "/Users/norman/workspace/education/phd/data/wearables/studies/usb-imove/processed_data/cleaned_labels"
-    out_dir = "./results/preprocessed_data_new"
-    col_file = "./everion_columns.csv"
+    data_root = Path("/Users/norman/workspace/education/phd/data/wearables")
+    data_dir = data_root / "studies/usb-imove/raw_data"
+    labels_dir = data_root / "studies/usb-imove/processed_data/cleaned_labels"
+    out_dir = Path("./results/preprocessed_data_new")
+    col_file = Path("./everion_columns.csv")
 
+    # The filenames look as follows:
+    # vital signs:
+    #   - iMove_001_storage-vital__left.csv
+    #   - iMove_001_storage-vital__right.csv
+    # raw sensor data:
+    #   - iMove_001_storage-vital_raw__left.csv
+    #   - iMove_001_storage-vital_raw__right.csv
+
+    # Extract information from the filenames.
     info_patterns = {
         "pat_id": "iMove_([0-9]{3})_.*__(?:left|right).*",
         "side": "iMove_[0-9]{3}_.*__(left|right).*",
         "side_short": "iMove_[0-9]{3}_.*__(left|right).*",
     }
     info_transformers = {
+        # Transformation: {left, right} -> {L, R}
         "side_short": lambda ret: ret.group(1)[0].upper()
     }
+    # Write methods.
     target_writers = {
-        ".csv": write_csv,
+        #".csv": write_csv,
         ".h5": write_hdf
     }
+    # Construct filenames out of parts.
     target_names = {
         ".csv": "{pat_id}{side_short}-{mode}.csv",
         ".h5":  "{pat_id}.h5/{mode}/{side}"
     }
-    targets = [
-        ".h5",
-        #".csv"
-    ]
 
-    ###########################################################################
-    print_title("Vital signals (no quality filtering)")
-    use_cols = [ "HR", "HRQ", "SpO2", "SpO2Q", "BloodPressure",
-                 "BloodPerfusion", "Activity", "Classification",
-                 "QualityClassification", "RespRate", "HRV", "LocalTemp",
-                 "ObjTemp", "timestamp", "DeMortonLabel", "DeMorton", ]
-    iom = IOManager(out_dir=out_dir,
-                    targets=targets,
-                    info_patterns=info_patterns,
-                    info_transformers=info_transformers,
-                    target_writers=target_writers,
-                    target_names=target_names,
-                    skip_existing=True,
-                    dry_run=False)
-    preprocess(mode="vital",
-               data_dir=data_dir,
-               glob_expr="*vital__*.csv",
-               col_lookup_file=col_file,
-               labels_dir=labels_dir,
-               use_cols=use_cols,
-               quality=None,
-               iom=iom)
+    if True:
+        print_title("Vital signals (no quality filtering)")
+        use_cols = [ "HR", "HRQ", "SpO2", "SpO2Q", "BloodPressure",
+                     "BloodPerfusion", "Activity", "Classification",
+                     "QualityClassification", "RespRate", "HRV", "LocalTemp",
+                     "ObjTemp", "timestamp", "DeMortonLabel", "DeMorton", ]
+        iom = IOManager(out_dir=out_dir,
+                        info_patterns=info_patterns,
+                        info_transformers=info_transformers,
+                        target_writers=target_writers,
+                        target_names=target_names,
+                        skip_existing=True,
+                        dry_run=False)
+        preprocess(mode="vital",
+                   data_dir=data_dir,
+                   glob_expr="*vital__*.csv",
+                   col_lookup_file=col_file,
+                   labels_dir=labels_dir,
+                   use_cols=use_cols,
+                   quality=None,
+                   iom=iom)
 
-    ###########################################################################
-    print_title("Raw sensor data (no quality filtering)")
-    use_cols = [ "AX", "AY", "AZ", "timestamp",
-                 "DeMortonLabel", "DeMorton" ]
-    iom = IOManager(out_dir=out_dir,
-                    targets=targets,
-                    info_patterns=info_patterns,
-                    info_transformers=info_transformers,
-                    target_writers=target_writers,
-                    target_names=target_names,
-                    skip_existing=True,
-                    dry_run=False)
-    preprocess(mode="raw",
-               data_dir=data_dir,
-               glob_expr="*vital_raw__*.csv",
-               col_lookup_file=col_file,
-               labels_dir=labels_dir,
-               use_cols=use_cols,
-               quality=None,
-               iom=iom)
+    if True:
+        print_title("Raw sensor data (no quality filtering)")
+        use_cols = [ "AX", "AY", "AZ", "timestamp",
+                     "DeMortonLabel", "DeMorton" ]
+        iom = IOManager(out_dir=out_dir,
+                        info_patterns=info_patterns,
+                        info_transformers=info_transformers,
+                        target_writers=target_writers,
+                        target_names=target_names,
+                        skip_existing=True,
+                        dry_run=False)
+        # Raw sensor data cannot be quality-filtered (quality=None).
+        preprocess(mode="raw",
+                   data_dir=data_dir,
+                   glob_expr="*vital_raw__*.csv",
+                   col_lookup_file=col_file,
+                   labels_dir=labels_dir,
+                   use_cols=use_cols,
+                   quality=None,
+                   iom=iom)
 
-    # print_title("Clean data with quality filter 50")
-    # out_sub_dir = Path(out_dir) / "cleaned2_labeled_quality_filtered_50"
-    # preprocess(data_dir=data_dir, labels_dir=labels_dir, out_dir=out_sub_dir,
-    #            col_lookup_file=col_file, quality=50)
-
-    # print_title("Clean data with quality filter 80")
-    # out_sub_dir = Path(out_dir) / "cleaned2_labeled_quality_filtered_80"
-    # preprocess(data_dir=data_dir, labels_dir=labels_dir, out_dir=out_sub_dir,
-    #            col_lookup_file=col_file, quality=80)
 
 if __name__ == "__main__":
     run()

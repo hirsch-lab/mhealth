@@ -19,6 +19,8 @@ def filter_quality_range(df, min_quality, range, signal_quality_name):
     df.iloc[df[signal_quality_name] > 100, range] = np.nan
 
 def filter_quality_except(df, min_quality, except_cols, signal_quality_name):
+    # except_cols should be valid columns (might hint on a bug if not)
+    assert len(set(except_cols) - set(df.columns))==0
     col_mask = ~df.columns.isin(except_cols)
     df.loc[df[signal_quality_name] < min_quality, col_mask] = np.nan
     df.loc[df[signal_quality_name] > 100, col_mask] = np.nan
