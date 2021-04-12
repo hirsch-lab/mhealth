@@ -175,14 +175,21 @@ def write_hdf(df, out_path, key=None, **kwargs):
                 is equivalent to
                 out_path = "path/to/file.h5"
                 key = "sub/path" if key is None else key
+
+    See also my notes here for some understanding:
+        https://stackoverflow.com/a/67066662/3388962
     """
     out_path = str(out_path).split(".h5")
     assert len(out_path)==2
     key = out_path[1] if key is None else key
-    out_path = out_path[0]+".h5"
+    out_path = Path(out_path[0]+".h5")
     key = None if not key else key
+    fmt = kwargs.pop("format", "table")
     mode = kwargs.pop("mode", "a")
-    df.to_hdf(out_path, key=key, mode=mode, **kwargs)
+    out_dir = out_path.parent
+    if not out_dir.is_dir():
+        out_dir.mkdir(parents=True, exist_ok=True)
+    df.to_hdf(out_path, key=key, mode=mode, format=fmt, **kwargs)
 
 
 @Timer(text=_timer_format("filter quality"), logger=DEFAULT_LOGGER)

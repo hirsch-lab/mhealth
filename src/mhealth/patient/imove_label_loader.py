@@ -61,7 +61,7 @@ def merge_labels(df, df_labels):
     if not df.empty and not df_labels.empty:
         # Specify dtype to avoid warnings regarding mixed
         # dtypes when saving into a HDF store.
-        df["DeMortonLabel"] = pd.Series(dtype=str)  # {str} + {None}
+        df["DeMortonLabel"] = None
         df["DeMortonDay"] = pd.Series(dtype=float)  # {int} + {None}
         df["DeMorton"] = pd.Series(dtype=float)     # {True, False, None}
         df_labels.apply(lambda row: add_label(row, df), axis=1)
@@ -72,7 +72,6 @@ def add_label(label_row, df):
     start = label_row["StartDate"]
     end = label_row["EndDate"]
     sel = (df.timestamp >= start) & (df.timestamp <= end)
-
     df.loc[sel, "DeMorton"] = 1
     if "Task" in label_row or True:
         # Task is always available!

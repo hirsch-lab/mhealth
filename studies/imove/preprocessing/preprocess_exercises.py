@@ -35,22 +35,20 @@ def write_hdf(df, out_path, key=None, **kwargs):
                 out_path = "path/to/file.h5"
                 key = "sub/path" if key is None else key
 
-    Detail: note the file-size overhead!
-    https://stackoverflow.com/questions/21635224
-    Solution: Use ptrepack, a command line utility (part of PyTables/tables):
-            ptrepack --chunkshape=auto --complevel=9 --complib=blosc \
-                     infile.h5 outfile.repack.h5
+    See also my notes here for some understanding:
+        https://stackoverflow.com/a/67066662/3388962
     """
     out_path = str(out_path).split(".h5")
     assert len(out_path)==2
     key = out_path[1] if key is None else key
     out_path = Path(out_path[0]+".h5")
     key = None if not key else key
+    fmt = kwargs.pop("format", "table")
     mode = kwargs.pop("mode", "a")
     out_dir = out_path.parent
     if not out_dir.is_dir():
         out_dir.mkdir(parents=True, exist_ok=True)
-    df.to_hdf(out_path, key=key, mode=mode, **kwargs)
+    df.to_hdf(out_path, key=key, mode=mode, format=fmt, **kwargs)
 
 
 def run(data_dir, out_dir):
