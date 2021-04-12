@@ -10,9 +10,13 @@ from pathlib import Path
 from codetiming import Timer
 
 import context
-from mhealth.utils import FileHelper, IOManager
+from mhealth.utils import IOManager
+from mhealth.patient import merge_labels
+from mhealth.utils.commons import (print_title,
+                                   print_subtitle,
+                                   catch_warnings,
+                                   create_progress_bar)
 from mhealth.data_analysis import filter_bad_quality_mixed_vital_raw
-from mhealth.patient import load_labels_for_patient, merge_labels
 
 # Preprocessing:
 #   - read data
@@ -139,9 +143,9 @@ def read_data(path, col_lookup, mode):
         # Setting low_memory=False to avoid a rare exception.
         # https://github.com/pandas-dev/pandas/issues/40587
         df = pd.read_csv(path, sep=";", header=[0,1], low_memory=False)
-    catch_warnings(ws, warning_to_catch=pd.errors.DtypeWarning,
-                   message_to_catch="have mixed types",
-                   enabled=(mode=="raw"))
+        catch_warnings(ws, warning_to_catch=pd.errors.DtypeWarning,
+                       message_to_catch="have mixed types",
+                       enabled=(mode=="raw"))
     # (2) fix inconsistently formatted rows
     if mode=="raw":
         df = fix_shifted_columns(df, how="remove")
@@ -158,6 +162,9 @@ def read_data(path, col_lookup, mode):
     assert df["timestamp"].dtype == "datetime64[ns, UTC]"
     col_diff = set(df.columns)-set(col_lookup.index)
     assert len(col_diff)==0, ("Unknown columns occurred: %s" % col_diff)
+    # Move to front
+    col = df.pop("timestamp")
+    df.insert(0, col.name, col)
     return df
 
 
@@ -202,9 +209,15 @@ def filter_by_quality(df, quality):
 
 @Timer(text=_timer_format("load labels"), logger=DEFAULT_LOGGER)
 def load_label_data(df, labels_dir, pat_id, side, **kwargs):
-    df_labels = load_labels_for_patient(labels_dir=labels_dir, pat_id=pat_id)
-    df = merge_labels(df=df, df_labels=df_labels)
-    df = df.astype({"DeMorton": bool, "DeMortonLabel": str})
+    exercise_file = labels_dir / f"{pat_id}.csv"
+    if not exercise_file.is_file():
+        msg = ("No exercise files are present. Skipping the calculation of "
+               "De Morton labels. Run preprocess_exercises.py first to not "
+               "see this warning.")
+        warnings.warn(msg)
+        return df
+    df_exercises = pd.read_csv(exercise_file)
+    df = merge_labels(df=df, df_labels=df_exercises)
     return df
 
 
@@ -212,23 +225,37 @@ def preprocess_files(mode, files, col_lookup_file, labels_dir,
                      use_cols, quality, iom):
     col_lookup = read_lookup(path=col_lookup_file)
     size = shutil.get_terminal_size()
+    progress = create_progress_bar(label=None,
+                                   size=len(files),
+                                   prefix='{variables.file:<36}',
+                                   variables={"file": "Processing...",
+                                              "mode": mode,
+                                              "pat_id": "",
+                                              "side": ""})
+    progress.start()
     for i, filepath in enumerate(files):
         iom.set_current(filepath, mode=mode)
+        pat_id = iom.info.get("pat_id")
+        side = iom.info.get("side")
+        progress.update(i, file=filepath.stem, pat_id=pat_id, side=side)
         if iom.skip_existing():
             continue
-        print("Processing %s..." % filepath.name)
         df = read_data(path=filepath, col_lookup=col_lookup, mode=mode)
         if df.empty:
             print("Warning: Encountered empty file (%s)" % filepath.name)
             continue
         df = filter_by_quality(df=df, quality=quality)
-        pat_id = iom.info.get("pat_id")
-        side = iom.info.get("side")
         df = load_label_data(df=df, labels_dir=labels_dir,
                              pat_id=pat_id, side=side)
         if use_cols:
+            # if "DeMorton" not in df.columns and "DeMorton" in use_cols:
+            #     use_cols = list(use_cols)
+            #     use_cols.remove("DeMorton")
+            #     use_cols.remove("DeMortonDay")
+            #     use_cols.remove("DeMortonLabel")
             df = df[use_cols].copy()
         iom.write_data(data=df)
+    progress.finish()
 
 
 def preprocess(mode, data_dir, glob_expr,
@@ -249,20 +276,14 @@ def preprocess(mode, data_dir, glob_expr,
                      iom=iom)
 
 
-def print_title(title, width=80):
-    print()
-    print("#"*width)
-    print(title)
-    print("#"*width)
+def run(data_dir, out_dir):
+    print_title("Processing Everion data:")
+    print("    data_dir:", data_dir)
+    print("    out_dir:", out_dir)
     print()
 
-
-def run():
-    data_root = Path("/Users/norman/workspace/education/phd/data/wearables")
-    data_dir = data_root / "studies/usb-imove/raw_data"
-    labels_dir = data_root / "studies/usb-imove/processed_data/cleaned_labels"
-    out_dir = Path("./results/preprocessed_data_new")
     col_file = Path("./everion_columns.csv")
+    labels_dir = out_dir / "exercises"
 
     # The filenames look as follows:
     # vital signs:
@@ -290,21 +311,25 @@ def run():
     # Construct filenames out of parts.
     target_names = {
         ".csv": "{pat_id}{side_short}-{mode}.csv",
-        ".h5":  "{pat_id}.h5/{mode}/{side}"
+        ".h5":  "store/{pat_id}.h5/{mode}/{side}"
     }
+    # Works only for target .csv. (Checks inside a .h5 file not possible yet)
+    skip_existing = False
 
     if True:
-        print_title("Vital signals (no quality filtering)")
-        use_cols = [ "HR", "HRQ", "SpO2", "SpO2Q", "BloodPressure",
+        print_subtitle("Vital signals (no quality filtering)")
+        use_cols = [ "timestamp", "HR", "HRQ", "SpO2", "SpO2Q", "BloodPressure",
                      "BloodPerfusion", "Activity", "Classification",
                      "QualityClassification", "RespRate", "HRV", "LocalTemp",
-                     "ObjTemp", "timestamp", "DeMortonLabel", "DeMorton", ]
+                     "ObjTemp",
+                     "DeMortonLabel", "DeMortonDay", "DeMorton",
+                    ]
         iom = IOManager(out_dir=out_dir,
                         info_patterns=info_patterns,
                         info_transformers=info_transformers,
                         target_writers=target_writers,
                         target_names=target_names,
-                        skip_existing=True,
+                        skip_existing=skip_existing,
                         dry_run=False)
         preprocess(mode="vital",
                    data_dir=data_dir,
@@ -316,15 +341,15 @@ def run():
                    iom=iom)
 
     if True:
-        print_title("Raw sensor data (no quality filtering)")
-        use_cols = [ "AX", "AY", "AZ", "timestamp",
-                     "DeMortonLabel", "DeMorton" ]
+        print_subtitle("Raw sensor data (no quality filtering)")
+        use_cols = [ "timestamp", "AX", "AY", "AZ",
+                     "DeMortonLabel", "DeMortonDay", "DeMorton" ]
         iom = IOManager(out_dir=out_dir,
                         info_patterns=info_patterns,
                         info_transformers=info_transformers,
                         target_writers=target_writers,
                         target_names=target_names,
-                        skip_existing=True,
+                        skip_existing=skip_existing,
                         dry_run=False)
         # Raw sensor data cannot be quality-filtered (quality=None).
         preprocess(mode="raw",
@@ -338,4 +363,8 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    data_root = Path("/Users/norman/workspace/education/phd/data/wearables")
+    data_dir = data_root / "studies/usb-imove/original/sensor"
+    out_dir = Path("../results/preprocessed_new")
+    run(data_dir=data_dir, out_dir=out_dir)
+
