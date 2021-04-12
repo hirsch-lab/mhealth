@@ -44,8 +44,7 @@ def filter_bad_quality_vital(df, min_quality):
     # quality signals omitted to remember original quality
     quality_cols = ["heart_rate_quality", "oxygen_saturation_quality",
                     "activity_classification_quality", "energy_quality",
-                    "heart_rate_variability_quality", "respiration_rate_quality"
-                    "respiration_rate_quality"]
+                    "heart_rate_variability_quality", "respiration_rate_quality"]
     set_bad_quality_nan_except(df, min_quality, quality_cols, 'heart_rate')
     set_bad_quality_nan_except(df, min_quality, quality_cols, 'heart_rate')
     set_bad_quality_nan_except(df, min_quality, quality_cols, 'heart_rate')
