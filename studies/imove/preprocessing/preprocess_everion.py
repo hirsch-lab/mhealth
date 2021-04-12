@@ -120,31 +120,6 @@ def fix_shifted_columns(df_raw, how):
     return df_raw
 
 
-def catch_warnings(ws, warning_to_catch=None,
-                   message_to_catch=None, enabled=True):
-    """
-    Print warnings as usual, except the ones in warning_to_catch.
-    """
-    caught_warnings = 0
-    if warning_to_catch is None:
-        warning_to_catch = []
-    if message_to_catch is None:
-        message_to_catch = []
-    elif isinstance(message_to_catch, str):
-        message_to_catch = [message_to_catch]
-    for w in ws:
-        if (not issubclass(w.category, warning_to_catch) or
-            not any(m in str(w.message) for m in message_to_catch) or
-            not enabled):
-            warnings.warn_explicit(message=w.message,
-                                   category=w.category,
-                                   filename=w.filename,
-                                   lineno=w.lineno)
-        else:
-            caught_warnings += 1
-    return bool(caught_warnings)
-
-
 def read_lookup(path):
     lookup = pd.read_csv(path, header=None, skipinitialspace=True, dtype=str)
     lookup.columns = ["index", "name", "dtype"]

@@ -1,3 +1,4 @@
+import warnings
 import progressbar as pg
 from typing import Optional
 
@@ -75,3 +76,37 @@ def create_progress_bar(size: Optional[int]=None,
                                term_width=width,
                                **kwargs)
     return progress
+
+
+def catch_warnings(ws, warning_to_catch=None,
+                   message_to_catch=None, enabled=True):
+    """
+    Print warnings as usual, except the ones in warning_to_catch.
+
+    To use within a warnings.catch_warnings() context:
+        with warnings.catch_warnings(record=True) as ws:
+            operations(...)
+            # ...
+            catch_warnings(ws,
+                           warning_to_catch=pd.errors.DtypeWarning,
+                           message_to_catch="have mixed types",
+                           enabled=(mode=="raw"))
+    """
+    caught_warnings = 0
+    if warning_to_catch is None:
+        warning_to_catch = []
+    if message_to_catch is None:
+        message_to_catch = []
+    elif isinstance(message_to_catch, str):
+        message_to_catch = [message_to_catch]
+    for w in ws:
+        if (not issubclass(w.category, warning_to_catch) or
+            not any(m in str(w.message) for m in message_to_catch) or
+            not enabled):
+            warnings.warn_explicit(message=w.message,
+                                   category=w.category,
+                                   filename=w.filename,
+                                   lineno=w.lineno)
+        else:
+            caught_warnings += 1
+    return bool(caught_warnings)
