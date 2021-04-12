@@ -44,6 +44,26 @@ def extract_infos(filename, patterns=None, transformers=None):
     return infos
 
 
+def _strip_path_annotations(path, target):
+    """
+    Purpose: Strip extra postfix info from path. Required mainly for
+             the .h5 target, where the groups can be added to the path:
+                path/to/file.h5/group/object
+    Examples:
+        f("./file.csv", ".csv")                -> ./file.csv
+        f("./files.csv/file.csv", ".csv")      -> ./files.csv/file.csv
+        f("./file.h5/group/object", ".h5")     -> ./file.h5
+        f("./.h5/file.h5/group/object", ".h5") -> ./.h5/file.h5
+    """
+    path = Path(path)
+    parts = list(path.parts)
+    while bool(parts) and not parts[-1].endswith(target):
+        parts.pop(-1)
+    if parts:
+        return Path(*parts)
+    else:
+        # Return original by default.
+        return path
 
 
 class IOManager:
@@ -262,15 +282,23 @@ class IOManager:
         targets = self._targets if targets is None else targets
         return {t: self.get_out_path(t, out_dir=out_dir) for t in targets}
 
-    def set_current(self, filepath,
+    def set_current(self, filepath, error=False,
                     **kwargs):
+        """
+        Returns True if filepath matches specified
+        """
         filepath = Path(filepath)
+        try:
+            infos = extract_infos(filename=filepath.name,
+                                  patterns=self._info_patterns,
+                                  transformers=self._info_transformers)
+        except AssertionError:
+            if error: raise
+            return False
+
         self.reset_current()
         # Info extraction
         self._info = {}
-        infos = extract_infos(filename=filepath.name,
-                              patterns=self._info_patterns,
-                              transformers=self._info_transformers)
         self._info["path"] = filepath
         #self._info["name"] = filepath.name
         self._info["name"] = filepath.stem
@@ -287,17 +315,21 @@ class IOManager:
                 "name": self._target_names.get(target, default_name),
                 "writer": self._target_writers.get(target, None)
             }
+        return True
 
     def reset_current(self):
         self._info = {}
         self._info_targets = {}
 
     def skip_existing(self, targets=None, out_dir=None):
+
         if not self._skip_existing:
             return False
         if not self._targets:
             return False
         out_paths = self.get_out_paths(targets=targets, out_dir=out_dir)
+        out_paths = {k:_strip_path_annotations(path=p, target=k)
+                     for k,p in out_paths.items()}
         exist = [path.is_file() for path in out_paths.values()]
         return all(exist)
 

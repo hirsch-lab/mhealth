@@ -3,7 +3,9 @@ import unittest
 import tempfile
 from pathlib import Path
 
-from ..utils.io_manager import IOManager, extract_infos
+from ..utils.io_manager import (IOManager,
+                                extract_infos,
+                                _strip_path_annotations)
 
 
 def write_csv(data, out_path):
@@ -12,6 +14,7 @@ def write_csv(data, out_path):
 def write_hdf(data, out_path):
     #print("Writing HDF %s..." % out_path)
     return out_path
+
 
 class TestExtractInfos(unittest.TestCase):
     def test_basic(self):
@@ -22,6 +25,18 @@ class TestExtractInfos(unittest.TestCase):
                               transformers={"initials": extract_initials})
         self.assertEqual(infos["surname"], "disney")
         self.assertEqual(infos["initials"], "WD")
+
+
+class TestStripAnnotations(unittest.TestCase):
+    def test_basic(self):
+        ret = _strip_path_annotations("path/file.csv", ".csv")
+        self.assertEqual(ret, Path("path/file.csv"))
+        ret = _strip_path_annotations("path/files.csv/file.csv", ".csv")
+        self.assertEqual(ret, Path("path/files.csv/file.csv"))
+        ret = _strip_path_annotations("path/file.h5/group/object", ".h5")
+        self.assertEqual(ret, Path("path/file.h5"))
+        ret = _strip_path_annotations("path/.h5/file.h5/group/object", ".h5")
+        self.assertEqual(ret, Path("path/.h5/file.h5"))
 
 
 class TestIOManager(unittest.TestCase):
