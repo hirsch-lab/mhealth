@@ -152,8 +152,6 @@ def run(data_dir, out_dir, delta_minutes, quality):
     progress.start()
     info = defaultdict(dict)
     for i, filepath in enumerate(files):
-        if i == 1:
-            break
         progress.update(i, file=filepath.stem)
         extract_data_store(out_dir=out_dir_store,
                            filepath=filepath,
@@ -161,7 +159,6 @@ def run(data_dir, out_dir, delta_minutes, quality):
                            quality=quality, info=info)
     progress.finish()
     print("Done!")
-
 
     info = pd.DataFrame(info).T
     info.index.names = ["Patient", "Mode", "Side"]

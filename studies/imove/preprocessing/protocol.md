@@ -22,7 +22,7 @@ python "preprocess_exercises.py"
     - Some typos are fixed with regard the task identifiers:
         - t → temp
         - temo → temp
-        - fault → default ??????
+        - fault → default **??????**
         - df → default
         - def → default
         - defaukt → default
@@ -93,7 +93,17 @@ python "extract_demorton_data.py"
 ```
 
 - In this third step, the data of interest is extracted
-- Main parameter `delta_minutes`: time margin between first and last De Morton measurement.
+- Main parameters:
+    - `delta_minutes`: time margin between first and last De Morton measurement.
+    - `quality`: 
+- Quality filtering:
+    - This is always true: If the vital data is missing, the raw sensor data is 
+    - The converse does not hold: if the raw data is missing, it is possible that the vital data is available.
+    - **Question**: shall we discard also the vital data if the sensor data is missing? Currently, we keep it.
+    - Filtering rules: 
+        - Heart rate > 0 and 
+        - HRQ > quality and 
+        - QualityClassification > quality
 - The data is stored in separate .h5 stores
 - **Output** is generated in the output directory:
     - outdir/extraction/: .h5 data
