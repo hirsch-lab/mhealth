@@ -1,5 +1,42 @@
 ## Data preprocessing
 
+To trigger the complete preprocessing procedure
+
+```bash
+python "preprocess_exercises.py"    # a couple of seconds
+python "preprocess_everion.py"      # 1-2 hours
+python "extract_demorton_data.py"   # a couple of minutes
+```
+
+
+### 1. De Morton exercises
+
+```bash
+python "preprocess_exercises.py"
+```
+
+- The patients performed the De Morton exercises on three (consecutive) days.
+- When the patients performed the exercises, timings were measured manually. This data was stored in .xlsx files, for each patient and exercise day separately.
+- This preprocessing step comprises
+    - The exercise data from the three days are combined per patient and formatted.
+    - Some typos are fixed with regard the task identifiers:
+        - t → temp
+        - temo → temp
+        - fault → default ??????
+        - df → default
+        - def → default
+        - defaukt → default
+- **Output** is generated in the output directory:
+    - outdir/exercises: .csv data
+    - outdir/store: .h5 data
+
+
+### 2. Sensor data
+
+```bash
+python "preprocess_everion.py"
+```
+
 - Two different types of readouts are available: the readouts of vital signals (sampling at 1Hz), and the raw sensor data (sampling at 50Hz). The latter includes also data from the optical sensors for the PPG (photoplethysmogram, pulse oximetry). Several vital signs are derived from those optical signals.
 - Our analyses assume that the computation of heart rate, oxygen saturation and other PPG-derived measures were performed correctly. The raw data is used only to read out accelerometer data.
 - Unfortunately, all timestamps in the data files are provided only in second resolution, which is bad for the raw sensor data sampled at 50Hz.
@@ -46,3 +83,17 @@ I decided to go with (1), assuming that the data in the correct format is correc
     - redcurr → RedCurr
     - IRcurr → IRCurr
     - ADCoffs → ADCoeffs
+- The timing measurements from the exercises (preprocessing step 1) are also merged into the tables (both raw and vital)
+
+
+### 3. De Morton data extraction
+
+```bash
+python "extract_demorton_data.py"
+```
+
+- In this third step, the data of interest is extracted
+- Main parameter `delta_minutes`: time margin between first and last De Morton measurement.
+- The data is stored in separate .h5 stores
+- **Output** is generated in the output directory:
+    - outdir/extraction/: .h5 data
