@@ -3,6 +3,7 @@ import glob
 import shutil
 import unittest
 
+from ..utils import testing
 from ..utils import everion_keys
 from ..utils.file_helper import FileHelper
 from ..patient.patient_data_loader import PatientDataLoader
@@ -12,7 +13,7 @@ _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')
 
 
-class HistogramPlotterTest(unittest.TestCase):
+class HistogramPlotterTest(testing.TestCase):
     out_dir = _MHEALTH_OUT_DIR
     plotter = HistogramPlotter()
 
@@ -75,7 +76,7 @@ class HistogramPlotterTest(unittest.TestCase):
         self.assertEqual(22, len(files))
 
 
-    @unittest.SkipTest
+    @testing.skip_because_is_runner
     def test_plot_histogram_vital(self):
         in_dir = ''
         out_dir = FileHelper.get_out_dir(in_dir=in_dir,
@@ -87,7 +88,7 @@ class HistogramPlotterTest(unittest.TestCase):
         self.assertTrue(True)
 
 
-    @unittest.SkipTest
+    @testing.skip_because_is_runner
     def test_plot_all_histograms_mixed_vital_raw(self):
         in_dir = ''
         out_dir = FileHelper.get_out_dir(in_dir=in_dir,

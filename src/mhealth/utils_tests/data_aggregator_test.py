@@ -3,6 +3,7 @@ import glob
 import unittest
 import numpy as np
 
+from ..utils import testing
 from ..utils import everion_keys
 from ..utils.file_helper import FileHelper
 from ..utils.data_aggregator import DataAggregator, Normalization
@@ -13,7 +14,7 @@ _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')
 
 
-class DataAggregatorTest(unittest.TestCase):
+class DataAggregatorTest(testing.TestCase):
     in_dir = f'{_MHEALTH_DATA}/vital_signals/'
     out_dir = _MHEALTH_OUT_DIR
 

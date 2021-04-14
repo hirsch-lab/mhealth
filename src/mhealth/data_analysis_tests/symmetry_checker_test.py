@@ -2,14 +2,15 @@ import os
 import glob
 import unittest
 
-from ..data_analysis.symmetry_checker import SymmetryChecker
+from ..utils import testing
 from ..utils.file_helper import FileHelper
+from ..data_analysis.symmetry_checker import SymmetryChecker
 
 _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')
 
 
-class QualityFilterTest(unittest.TestCase):
+class QualityFilterTest(testing.TestCase):
 
     def test_symmetry_analysis(self):
         data_dir = f'{_MHEALTH_DATA}/imove/data'

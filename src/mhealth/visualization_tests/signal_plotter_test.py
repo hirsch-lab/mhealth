@@ -3,6 +3,7 @@ import glob
 import shutil
 import unittest
 
+from ..utils import testing
 from ..utils import everion_keys
 from ..utils.file_helper import FileHelper
 from ..visualization.signal_plotter import SignalPlotter
@@ -11,7 +12,7 @@ _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')
 
 
-class SignalPlotterTest(unittest.TestCase):
+class SignalPlotterTest(testing.TestCase):
     in_dir = f'{_MHEALTH_DATA}/vital_signals/'
     out_dir = _MHEALTH_OUT_DIR
     plotter = SignalPlotter()
@@ -50,7 +51,7 @@ class SignalPlotterTest(unittest.TestCase):
         self.assertEqual(5, len(files))
 
 
-    @unittest.SkipTest
+    @testing.skip_because_is_runner
     def test_plot_signals_vital(self):
         dir_name = ''
         out_dir = FileHelper.get_out_dir(in_dir=dir_name,

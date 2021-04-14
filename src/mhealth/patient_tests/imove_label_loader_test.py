@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
+from ..utils import testing
 from ..utils.file_helper import FileHelper
 from ..patient.patient_data_loader import PatientDataLoader
 from ..patient.imove_label_loader import merge_labels, load_labels
@@ -12,7 +13,7 @@ from ..patient.imove_label_loader import merge_labels, load_labels
 _MHEALTH_DATA = os.getenv("MHEALTH_DATA", "../../resources")
 
 
-class ImoveLabelLoaderTest(unittest.TestCase):
+class ImoveLabelLoaderTest(testing.TestCase):
     data_dir = Path(f"{_MHEALTH_DATA}")
 
     def test_load_labels(self):

@@ -1,12 +1,13 @@
 import os
 import unittest
 
+from ..utils import testing
 from ..patient.patient_data_loader import PatientDataLoader
 
 _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 
 
-class PatientDataLoaderTest(unittest.TestCase):
+class PatientDataLoaderTest(testing.TestCase):
 
     def test_load_everion_data_tz_zurich(self):
         dir_name = f'{_MHEALTH_DATA}/vital_signals/'

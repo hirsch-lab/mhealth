@@ -3,9 +3,8 @@ import unittest
 import tempfile
 from pathlib import Path
 
-from ..utils.io_manager import (IOManager,
-                                extract_infos,
-                                _strip_path_annotations)
+from ..utils import testing
+from ..utils.io_manager import (IOManager, extract_infos)
 
 
 def write_csv(data, out_path):
@@ -16,7 +15,7 @@ def write_hdf(data, out_path):
     return out_path
 
 
-class TestExtractInfos(unittest.TestCase):
+class TestExtractInfos(testing.TestCase):
     def test_basic(self):
         extract_initials = lambda ret: (ret.group(1)+ret.group(2)).upper()
         infos = extract_infos("walt_disney",
@@ -38,8 +37,7 @@ class TestStripAnnotations(unittest.TestCase):
         ret = _strip_path_annotations("path/.h5/file.h5/group/object", ".h5")
         self.assertEqual(ret, Path("path/.h5/file.h5"))
 
-
-class TestIOManager(unittest.TestCase):
+class TestIOManager(testing.TestCase):
     def setUp(self):
         self.in_dir = Path("path/to/data")
         self.files = [

@@ -2,6 +2,7 @@ import os
 import glob
 import unittest
 
+from ..utils import testing
 from ..utils import everion_keys
 from ..utils.file_helper import FileHelper
 from ..patient.patient_data_loader import PatientDataLoader
@@ -11,7 +12,7 @@ _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')
 
 
-class GenderVisualizerTest(unittest.TestCase):
+class GenderVisualizerTest(testing.TestCase):
     out_dir = _MHEALTH_OUT_DIR
 
     def test_plot_age(self):
@@ -38,7 +39,7 @@ class GenderVisualizerTest(unittest.TestCase):
         self.assertEqual(1, len(files))
 
 
-    @unittest.SkipTest
+    @testing.skip_because_is_runner
     def test_plot_age_vital(self):
         in_dir = ''
         extra_data_dir_name = ''
@@ -60,7 +61,7 @@ class GenderVisualizerTest(unittest.TestCase):
         self.assertEqual(1, len(files))
 
 
-    @unittest.SkipTest
+    @testing.skip_because_is_runner
     def test_plot_age_mixed_vital_raw(self):
         in_dir = ''
         extra_data_dir_name = ''

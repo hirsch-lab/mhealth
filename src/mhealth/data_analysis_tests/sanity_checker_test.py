@@ -2,13 +2,14 @@ import os
 import unittest
 import pandas as pd
 
+from ..utils import testing
 from ..data_analysis.sanity_checker import SanityChecker
 
 _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')
 
 
-class SanityCheckerTest(unittest.TestCase):
+class SanityCheckerTest(testing.TestCase):
     checker = SanityChecker()
     out_dir = _MHEALTH_OUT_DIR
 
@@ -51,7 +52,7 @@ class SanityCheckerTest(unittest.TestCase):
         self.assertAlmostEqual(df[signal][6], value3, 8)
 
 
-    @unittest.SkipTest
+    @testing.skip_because_is_runner
     def test_run_full(self):
         in_dir = ''
         in_file_suffix = '.csv'

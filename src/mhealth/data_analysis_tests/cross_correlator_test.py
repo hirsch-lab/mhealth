@@ -2,6 +2,7 @@ import os
 import glob
 import unittest
 
+from ..utils import testing
 from ..utils import everion_keys
 from ..utils.file_helper import FileHelper
 from ..utils.data_aggregator import Normalization
@@ -12,7 +13,7 @@ _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')
 
 
-class CrossCorrelatorTest(unittest.TestCase):
+class CrossCorrelatorTest(testing.TestCase):
     in_dir = f'{_MHEALTH_DATA}/vital_signals/'
     in_dir_mixed = f'{_MHEALTH_DATA}/mixed_vital_raw_signals/'
     out_dir = _MHEALTH_OUT_DIR
@@ -78,7 +79,7 @@ class CrossCorrelatorTest(unittest.TestCase):
         files = list(out_dir.glob("**/*.png"))
         self.assertEqual(25, len(files))
 
-    @unittest.SkipTest
+    @testing.skip_because_is_runner
     def test_cross_hours_vital(self):
         in_dir = ''
         out_dir = FileHelper.get_out_dir(in_dir=in_dir,
@@ -94,7 +95,7 @@ class CrossCorrelatorTest(unittest.TestCase):
 
         self.assertTrue(True)
 
-    @unittest.SkipTest
+    @testing.skip_because_is_runner
     def test_cross_days_vital(self):
         in_dir = ''
         out_dir = FileHelper.get_out_dir(in_dir=in_dir,
@@ -110,7 +111,7 @@ class CrossCorrelatorTest(unittest.TestCase):
 
         self.assertTrue(True)
 
-    @unittest.SkipTest
+    @testing.skip_because_is_runner
     def test_cross_correlator_hours_mixed_raw_vital(self):
         in_dir = ''
         out_dir = FileHelper.get_out_dir(in_dir=in_dir,
@@ -126,7 +127,7 @@ class CrossCorrelatorTest(unittest.TestCase):
 
         self.assertTrue(True)
 
-    @unittest.SkipTest
+    @testing.skip_because_is_runner
     def test_cross_correlator_days_mixed_vital_raw(self):
         in_dir = ''
         out_dir = FileHelper.get_out_dir(in_dir=in_dir,

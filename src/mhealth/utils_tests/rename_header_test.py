@@ -1,11 +1,12 @@
 import unittest
 
+from ..utils import testing
 from ..utils.rename_header import RenameHeader
 
 
-class RenameHeaderTest(unittest.TestCase):
+class RenameHeaderTest(testing.TestCase):
 
-    @unittest.SkipTest
+    @testing.skip_because_is_runner
     def test_change_header_mixed_vital_raw(self):
         directory = ''
         header = RenameHeader()

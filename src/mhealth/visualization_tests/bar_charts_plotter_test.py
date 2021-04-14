@@ -2,6 +2,7 @@ import glob
 import os
 import unittest
 
+from ..utils import testing
 from ..utils import everion_keys
 from ..utils.file_helper import FileHelper
 from ..utils.data_aggregator import Normalization
@@ -12,7 +13,7 @@ _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')
 
 
-class BarChartsPlotterTest(unittest.TestCase):
+class BarChartsPlotterTest(testing.TestCase):
     in_dir_vital = f'{_MHEALTH_DATA}/vital_signals/'
     in_dir_mixed_raw_vital = f'{_MHEALTH_DATA}/mixed_vital_raw_signals/'
     out_dir = _MHEALTH_OUT_DIR
@@ -67,7 +68,7 @@ class BarChartsPlotterTest(unittest.TestCase):
         self.assertEqual(5, len(files))
 
 
-    @unittest.SkipTest
+    @testing.skip_because_is_runner
     def test_bar_charts_plotter_vital(self):
         in_dir = ''
         out_dir = FileHelper.get_out_dir(in_dir=in_dir,
@@ -84,7 +85,7 @@ class BarChartsPlotterTest(unittest.TestCase):
         self.assertTrue(True)
 
 
-    @unittest.SkipTest
+    @testing.skip_because_is_runner
     def test_bar_charts_multiscale_vital(self):
         in_dir = ''
         out_dir = FileHelper.get_out_dir(in_dir=in_dir,

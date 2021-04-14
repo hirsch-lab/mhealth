@@ -3,6 +3,7 @@ import shutil
 import unittest
 import numpy as np
 
+from ..utils import testing
 from ..utils.file_helper import FileHelper
 from ..data_analysis.quality_filter import QualityFilter
 from ..patient.patient_data_loader import PatientDataLoader
@@ -11,7 +12,7 @@ _MHEALTH_DATA = os.getenv('MHEALTH_DATA', '../../resources')
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')
 
 
-class QualityFilterTest(unittest.TestCase):
+class QualityFilterTest(testing.TestCase):
     in_dir_vital = f'{_MHEALTH_DATA}/vital_signals/'
     in_dir_mixed_vital_raw = f'{_MHEALTH_DATA}/mixed_vital_raw_signals/'
     out_dir = _MHEALTH_OUT_DIR
@@ -107,7 +108,7 @@ class QualityFilterTest(unittest.TestCase):
                 self.assertTrue((out_dir_vital / filename).is_file())
 
 
-    @unittest.SkipTest
+    @testing.skip_because_is_runner
     def test_filter_signal_all_vital(self):
         quality = 50
         dir_name = ''
@@ -128,7 +129,7 @@ class QualityFilterTest(unittest.TestCase):
         self.assertTrue(True)
 
 
-    @unittest.SkipTest
+    @testing.skip_because_is_runner
     def test_filter_signal_all_mixed_vital_raw(self):
         quality = 50
         dir_name = ''

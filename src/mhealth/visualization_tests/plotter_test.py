@@ -3,6 +3,7 @@ import glob
 import shutil
 import unittest
 
+from ..utils import testing
 from ..utils import everion_keys
 from ..utils.file_helper import FileHelper
 from ..utils.data_aggregator import Normalization
@@ -13,7 +14,7 @@ _MHEALTH_DATA = os.getenv("MHEALTH_DATA", "../resources")
 _MHEALTH_OUT_DIR = os.path.join(_MHEALTH_DATA, 'output')
 
 
-class PlotterTest(unittest.TestCase):
+class PlotterTest(testing.TestCase):
     in_dir = f'{_MHEALTH_DATA}/vital_signals/'
     out_dir = _MHEALTH_OUT_DIR
     plotter = Plotter()
@@ -125,7 +126,7 @@ class PlotterTest(unittest.TestCase):
         self.assertEqual(5, len(files))
 
 
-    @unittest.SkipTest
+    @testing.skip_because_is_runner
     def test_plot_signals_vital(self):
         dir_name = ''
         out_dir = FileHelper.get_out_dir(in_dir=dir_name,
@@ -142,7 +143,7 @@ class PlotterTest(unittest.TestCase):
         self.assertTrue(True)
 
 
-    @unittest.SkipTest
+    @testing.skip_because_is_runner
     def test_plot_all_signals_mixed_vital_raw(self):
         in_dir = ''
         out_dir = FileHelper.get_out_dir(in_dir=in_dir,
@@ -162,7 +163,7 @@ class PlotterTest(unittest.TestCase):
                                                       end_idx=3)
 
 
-    @unittest.SkipTest
+    @testing.skip_because_is_runner
     def test_plot_hourly_lines_vital(self):
         in_dir = ''
         out_dir = FileHelper.get_out_dir(in_dir=in_dir,
@@ -177,7 +178,7 @@ class PlotterTest(unittest.TestCase):
         self.plotter.plot_hourly_lines(properties=props)
 
 
-    @unittest.SkipTest
+    @testing.skip_because_is_runner
     def test_plot_labels_mixed_vital_raw(self):
         in_dir = ''
         out_dir = FileHelper.get_out_dir(in_dir=in_dir,
