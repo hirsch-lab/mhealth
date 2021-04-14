@@ -1,8 +1,55 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+from pathlib import Path
 from datetime import datetime
+
+import matplotlib
+import matplotlib.pyplot as plt
+
 from .signal_properties import SignalProperties
+from .file_helper import ensure_counted_path
+
+
+from typing import Union, Tuple, Optional
+PathLike = Union[str, Path]
+OptionalFigure = Optional[matplotlib.figure.Figure]
+
+
+def save_figure(path: PathLike="./plot.pdf",
+                fig: OptionalFigure=None,
+                override: bool=True,
+                skip_first: bool=True,
+                **kwargs) -> Path:
+    """
+    Save current figure to path: <outdir>/<ext>/<basename>.<ext>
+    If fig is None, the current figure is used. **kwargs is used
+    synonymously for the settings dict.
+
+    Arguments:
+        path:       Path where the image should be saved to. The file
+                    extension determines how the plot is printed.
+                    Parent directories are created if not existent.
+        override:   If False and if the target file already exists,
+                    path = ensure_counted_path(path)
+        skip_first: Applies if override=True. Controls if the
+                    first file is postfixed by a count or not.
+        **kwargs:   Additional keyword arguments are forwarded to
+                    plt.savefig
+    """
+    dpi = kwargs.pop("dpi", None)
+    bbox_inches = kwargs.pop("bbox_inches", "tight")
+    transparent = kwargs.pop("transparent", False)
+    if fig is not None:
+        plt.figure(fig.number)
+    path = ensure_counted_path(path=path,
+                               skip_first=skip_first,
+                               enabled=not override)
+    plt.savefig(path,
+                transparent=transparent,
+                bbox_inches="tight",
+                dpi=dpi,
+                **kwargs)
+    return path
 
 
 class PlotterHelper:
