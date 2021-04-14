@@ -36,7 +36,19 @@ def extract_data(df, delta_minutes):
     return df
 
 
+def quality_filter_vital(df, quality):
+    mask = (df[QUALITY_COLS] > quality).all(axis=1)
+    mask &= (df["HR"] > 0)
+    df = df[mask]
+    return df.copy()
+
+
 def quality_filter(data, side, quality):
+    """
+    Filter by quality of the vital data. Also exclude the corresponding
+    timestamps for the raw sensor data if it is available.
+    """
+
     # See the notes in preprocessing.md!
     vital_key = f"vital/{side}"
     raw_key = f"raw/{side}"
@@ -46,17 +58,16 @@ def quality_filter(data, side, quality):
         # Nothing to do
         return
     # Filter vital.
-    vital = data[vital_key].set_index("timestamp")
-    mask = (vital[QUALITY_COLS] > quality).all(axis=1)
-    mask &= (vital["HR"] > 0)
-    vital = vital[mask]
-    data[vital_key] = vital.reset_index().copy()
+    vital = data[vital_key]
+    vital = quality_filter_vital(df=vital, quality=quality)
+    data[vital_key] = vital
     if raw_key not in data:
         # Nothing to do
         return
     # Filter raw.
+    vital_tmp = vital.set_index("timestamp")
     raw = data[raw_key].set_index("timestamp")
-    index = raw.index.intersection(vital.index)
+    index = raw.index.intersection(vital_tmp.index)
     raw = raw.loc[index]
     data[raw_key] = raw.reset_index().copy()
 
@@ -127,15 +138,26 @@ def extract_data_store(filepath, out_dir,
         if key not in store:
             continue
         df = store[key]
-        measure_info(key=key, case=case, group="initial", df=df, info=info)
+
+        # Measure the effect of quality filtering on the entire data, that
+        # is, before extraction of De Morton data. Only do this for vital
+        # data. This was added to reproduce legacy code (SanityChecker).
+        measure_info(key=key, case=case, group="original", df=df, info=info)
+        if "vital" in key:
+            dfq = quality_filter_vital(df=df, quality=quality)
+            measure_info(key=key, case=case, group="original_filtered",
+                         df=dfq, info=info)
+
         df = extract_data(df, delta_minutes=delta_minutes)
         data[key] = df
     store.close()
 
-    measure_infos(case=case, group="before", data=data, info=info)
+    # Quality filtering, this filters both vital and acc:
+    #
+    measure_infos(case=case, group="extraction", data=data, info=info)
     quality_filter(data=data, side="left", quality=quality)
     quality_filter(data=data, side="right", quality=quality)
-    measure_infos(case=case, group="after", data=data, info=info)
+    measure_infos(case=case, group="extraction_filtered", data=data, info=info)
 
 
 def run(data_dir, out_dir, delta_minutes, quality):
@@ -165,7 +187,9 @@ def run(data_dir, out_dir, delta_minutes, quality):
     for mode in info.index.levels[1]:
         for group in info.columns.levels[0]:
             out_path = out_dir / f"filtering_{mode}_{group}.csv"
-            info.loc[pd.IndexSlice[:, mode], group].to_csv(out_path)
+            df = info.loc[pd.IndexSlice[:, mode], group]
+            df = df.dropna(how="all", axis=1)
+            df.to_csv(out_path)
 
 
 if __name__ == "__main__":
