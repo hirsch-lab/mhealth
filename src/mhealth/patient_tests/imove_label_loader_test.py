@@ -46,7 +46,7 @@ class ImoveLabelLoaderTest(testing.TestCase):
             ret = merge_labels(df=df, df_labels=df_labels)
 
             self.assertEqual((64, 25), df.shape, "df shape not matching")
-            self.assertTrue(np.isnan(df["DeMorton"][0]))
+            self.assertFalse(df["DeMorton"][0])
             self.assertEqual(1, df["DeMorton"][1])
             self.assertEqual(1, df["DeMorton"][39])
             self.assertEqual(1, df["DeMorton"][57])
