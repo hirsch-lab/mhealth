@@ -1,4 +1,6 @@
 import os
+import shutil
+import tempfile
 import unittest
 import importlib
 import numpy as np
@@ -85,6 +87,15 @@ class StdoutRedirectionContext():
 
 
 class TestCase(unittest.TestCase):
+    @staticmethod
+    def make_test_dir(prefix="test"):
+        return Path(tempfile.mkdtemp(prefix=prefix))
+
+    @staticmethod
+    def remove_test_dir(path):
+        if path.is_dir():
+            shutil.rmtree(path, ignore_errors=True)
+
     def assertIsFile(self, path):
         if path is None:
             raise AssertionError("None is not a valid path.")

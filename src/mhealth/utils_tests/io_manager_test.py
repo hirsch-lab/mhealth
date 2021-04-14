@@ -1,6 +1,4 @@
-import shutil
 import unittest
-import tempfile
 from pathlib import Path
 
 from ..utils import testing
@@ -35,14 +33,10 @@ class TestIOManager(testing.TestCase):
             self.in_dir / "c.txt",
             self.in_dir / "d.txt",
         ]
-
-        self.out_dir = Path(tempfile.mkdtemp(prefix="output"))
-        print(self.out_dir)
+        self.out_dir = self.make_test_dir(prefix="output")
 
     def tearDown(self):
-        if self.out_dir.is_dir():
-            shutil.rmtree(self.out_dir, ignore_errors=True)
-        print(self.out_dir, self.out_dir.is_dir())
+        self.remove_test_dir(self.out_dir)
 
     def test_constr_init_equivalence(self):
         info_patterns = { "name_upper": "(.*)", }
