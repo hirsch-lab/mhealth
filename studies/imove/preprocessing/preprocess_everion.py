@@ -16,6 +16,7 @@ from mhealth.utils.commons import (print_title,
                                    print_subtitle,
                                    catch_warnings,
                                    create_progress_bar)
+from mhealth.utils.file_helper import write_csv, write_hdf
 from mhealth.data_analysis import filter_bad_quality_mixed_vital_raw
 
 # Preprocessing:
@@ -169,34 +170,13 @@ def read_data(path, col_lookup, mode):
 
 
 @Timer(text=_timer_format("write .csv"), logger=DEFAULT_LOGGER)
-def write_csv(df, out_path, **kwargs):
-    sep = kwargs.pop("sep", ",")
-    with_index = kwargs.pop("index", False)
-    df.to_csv(out_path, sep=sep, index=with_index, **kwargs)
+def write_csv_timed(df, out_path, **kwargs):
+    return write_csv(df=df, path=path, index=False, **kwargs)
 
 
 @Timer(text=_timer_format("write .hdf"), logger=DEFAULT_LOGGER)
-def write_hdf(df, out_path, key=None, **kwargs):
-    """
-    Convention: out_path = "path/to/file.h5/sub/path"
-                is equivalent to
-                out_path = "path/to/file.h5"
-                key = "sub/path" if key is None else key
-
-    See also my notes here for some understanding:
-        https://stackoverflow.com/a/67066662/3388962
-    """
-    out_path = str(out_path).split(".h5")
-    assert len(out_path)==2
-    key = out_path[1] if key is None else key
-    out_path = Path(out_path[0]+".h5")
-    key = None if not key else key
-    fmt = kwargs.pop("format", "table")
-    mode = kwargs.pop("mode", "a")
-    out_dir = out_path.parent
-    if not out_dir.is_dir():
-        out_dir.mkdir(parents=True, exist_ok=True)
-    df.to_hdf(out_path, key=key, mode=mode, format=fmt, **kwargs)
+def write_hdf_timed(df, out_path, key=None, **kwargs):
+    return write_hdf(df=df, path=path, key=key, **kwargs)
 
 
 @Timer(text=_timer_format("filter quality"), logger=DEFAULT_LOGGER)
@@ -227,7 +207,7 @@ def preprocess_files(mode, files, col_lookup_file, labels_dir,
     size = shutil.get_terminal_size()
     progress = create_progress_bar(label=None,
                                    size=len(files),
-                                   prefix='{variables.file:<36}',
+                                   prefix="{variables.file:<36}",
                                    variables={"file": "Processing...",
                                               "mode": mode,
                                               "pat_id": "",
@@ -305,8 +285,8 @@ def run(data_dir, out_dir):
     }
     # Write methods.
     target_writers = {
-        #".csv": write_csv,
-        ".h5": write_hdf
+        #".csv": write_csv_timed,
+        ".h5": write_hdf_timed
     }
     # Construct filenames out of parts.
     target_names = {

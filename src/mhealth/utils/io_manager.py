@@ -44,28 +44,6 @@ def extract_infos(filename, patterns=None, transformers=None):
     return infos
 
 
-def _strip_path_annotations(path, target):
-    """
-    Purpose: Strip extra postfix info from path. Required mainly for
-             the .h5 target, where the groups can be added to the path:
-                path/to/file.h5/group/object
-    Examples:
-        f("./file.csv", ".csv")                -> ./file.csv
-        f("./files.csv/file.csv", ".csv")      -> ./files.csv/file.csv
-        f("./file.h5/group/object", ".h5")     -> ./file.h5
-        f("./.h5/file.h5/group/object", ".h5") -> ./.h5/file.h5
-    """
-    path = Path(path)
-    parts = list(path.parts)
-    while bool(parts) and not parts[-1].endswith(target):
-        parts.pop(-1)
-    if parts:
-        return Path(*parts)
-    else:
-        # Return original by default.
-        return path
-
-
 class IOManager:
     """
     Manager for the abstraction of IO operations.

@@ -26,17 +26,6 @@ class TestExtractInfos(testing.TestCase):
         self.assertEqual(infos["initials"], "WD")
 
 
-class TestStripAnnotations(unittest.TestCase):
-    def test_basic(self):
-        ret = _strip_path_annotations("path/file.csv", ".csv")
-        self.assertEqual(ret, Path("path/file.csv"))
-        ret = _strip_path_annotations("path/files.csv/file.csv", ".csv")
-        self.assertEqual(ret, Path("path/files.csv/file.csv"))
-        ret = _strip_path_annotations("path/file.h5/group/object", ".h5")
-        self.assertEqual(ret, Path("path/file.h5"))
-        ret = _strip_path_annotations("path/.h5/file.h5/group/object", ".h5")
-        self.assertEqual(ret, Path("path/.h5/file.h5"))
-
 class TestIOManager(testing.TestCase):
     def setUp(self):
         self.in_dir = Path("path/to/data")

@@ -17,39 +17,7 @@ from collections import defaultdict
 import context
 from mhealth.utils.commons import create_progress_bar, print_title
 from mhealth.patient.imove_label_loader import load_labels
-
-
-def write_csv(df, out_path, **kwargs):
-    out_dir = out_path.parent
-    if not out_dir.is_dir():
-        out_dir.mkdir(parents=True, exist_ok=True)
-    sep = kwargs.pop("sep", ",")
-    with_index = kwargs.pop("index", False)
-    df.to_csv(out_path, sep=sep, index=with_index, **kwargs)
-
-
-def write_hdf(df, out_path, key=None, **kwargs):
-    """
-    Convention: out_path = "path/to/file.h5/sub/path"
-                is equivalent to
-                out_path = "path/to/file.h5"
-                key = "sub/path" if key is None else key
-
-    See also my notes here for some understanding:
-        https://stackoverflow.com/a/67066662/3388962
-    """
-    out_path = str(out_path).split(".h5")
-    assert len(out_path)==2
-    key = out_path[1] if key is None else key
-    out_path = Path(out_path[0]+".h5")
-    key = None if not key else key
-    fmt = kwargs.pop("format", "table")
-    mode = kwargs.pop("mode", "a")
-    out_dir = out_path.parent
-    if not out_dir.is_dir():
-        out_dir.mkdir(parents=True, exist_ok=True)
-    df.to_hdf(out_path, key=key, mode=mode, format=fmt, **kwargs)
-
+from mhealth.utils.file_helper import write_csv, write_hdf
 
 def run(data_dir, out_dir):
     print_title("Processing De Morton data:")
@@ -81,9 +49,9 @@ def run(data_dir, out_dir):
     for i, pid in enumerate(data):
         df = pd.concat(data[pid], axis=0)
         path_csv = out_dir / "exercises" / f"{pid}.csv"
-        write_csv(df=df, out_path=path_csv)
+        write_csv(df=df, path=path_csv, index=False)
         path_hdf = out_dir / "store" / f"{pid}.h5/exercises"
-        write_hdf(df=df, out_path=path_hdf)
+        write_hdf(df=df, path=path_hdf)
         progress.update(i)
     progress.finish()
 
