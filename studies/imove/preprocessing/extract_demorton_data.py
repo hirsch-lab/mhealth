@@ -6,6 +6,7 @@ from collections import defaultdict
 
 import context
 from mhealth.utils.commons import create_progress_bar
+from mhealth.utils.file_helper import ensure_dir, write_csv, write_hdf
 
 
 KEYS = [
@@ -127,11 +128,9 @@ def measure_infos(case, group, data, info):
         measure_info(key=key, case=case, group=group, df=df, info=info)
 
 
-def extract_data_store(filepath, out_dir,
-                       delta_minutes, quality,
-                       info):
+def extract_data_store(filepath, delta_minutes, quality, info):
     # Structure: {pat_id}.h5/{mode}/{side}"
-    store = pd.HDFStore(filepath)
+    store = pd.HDFStore(filepath, mode="r")
     case = filepath.stem
     data = {}
     for key in KEYS:
@@ -150,14 +149,26 @@ def extract_data_store(filepath, out_dir,
 
         df = extract_data(df, delta_minutes=delta_minutes)
         data[key] = df
+    data["exercises"] = store.get("exercises")
     store.close()
 
     # Quality filtering, this filters both vital and acc:
-    #
+    # The actual filter takes place on the data frame for vital data,
+    # the accelerometer data will be filtered on the timestamp.
     measure_infos(case=case, group="extraction", data=data, info=info)
     quality_filter(data=data, side="left", quality=quality)
     quality_filter(data=data, side="right", quality=quality)
     measure_infos(case=case, group="extraction_filtered", data=data, info=info)
+    return data
+
+
+def write_extracted_data(out_dir, case, data):
+    for key, df in data.items():
+        name_csv = case + "_" + key.lower().replace("/", "_") + ".csv"
+        path_csv = out_dir / "csv" / case / name_csv
+        path_hdf = out_dir / "store" / (case+".h5")
+        write_csv(df=df, path=path_csv)
+        write_hdf(df=df, path=path_hdf, key=key)
 
 
 def run(data_dir, out_dir, delta_minutes, quality):
@@ -165,8 +176,7 @@ def run(data_dir, out_dir, delta_minutes, quality):
     if not files:
         print("Error: No files in data folder:", data_dir)
     out_dir_store = out_dir / "store"
-    if not out_dir_store.is_dir():
-        out_dir_store.mkdir(parents=True, exist_ok=True)
+    ensure_dir(out_dir_store)
     progress = create_progress_bar(label=None,
                                    size=len(files),
                                    prefix="Patient {variables.file:<3}... ",
@@ -175,10 +185,10 @@ def run(data_dir, out_dir, delta_minutes, quality):
     info = defaultdict(dict)
     for i, filepath in enumerate(files):
         progress.update(i, file=filepath.stem)
-        extract_data_store(out_dir=out_dir_store,
-                           filepath=filepath,
-                           delta_minutes=delta_minutes,
-                           quality=quality, info=info)
+        data = extract_data_store(filepath=filepath,
+                                  delta_minutes=delta_minutes,
+                                  quality=quality, info=info)
+        write_extracted_data(out_dir=out_dir, case=filepath.stem, data=data)
     progress.finish()
     print("Done!")
 
@@ -194,7 +204,7 @@ def run(data_dir, out_dir, delta_minutes, quality):
 
 if __name__ == "__main__":
     data_dir = Path("../results/preprocessed")
-    out_dir = Path("../results/extraction")
+    out_dir = Path("../results/extraction_new")
     delta_minutes = 15
     quality = 50
     run(data_dir=data_dir, out_dir=out_dir,
