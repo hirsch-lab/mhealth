@@ -40,6 +40,8 @@ def run(data_dir, out_dir):
         df = load_labels(path)
         df.insert(0, "Day", day)
         df.insert(0, "Patient", pid)
+        df["StartDate"] = df["StartDate"].dt.tz_convert("UTC")
+        df["EndDate"] = df["EndDate"].dt.tz_convert("UTC")
         data[pid].append(df)
         progress.update(i)
     progress.finish()
