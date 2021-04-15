@@ -1,3 +1,4 @@
+import shutil
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -101,10 +102,10 @@ def measure_info(key, case, group, df, info):
         ts_diff = (ts_max-ts_min).total_seconds()
 
         info[key][(group, "Counts", "nSamples")] = n_samples
-        info[key][(group, "Time", "start")] = ts_min
-        info[key][(group, "Time", "stop")] = ts_max
-        info[key][(group, "Time", "validHours")] = n_samples/3600./sr
-        info[key][(group, "Time", "totalHours")] = ts_diff/3600
+        info[key][(group, "Time", "Start")] = ts_min
+        info[key][(group, "Time", "End")] = ts_max
+        info[key][(group, "Time", "ValidHours")] = n_samples/3600./sr
+        info[key][(group, "Time", "TotalHours")] = ts_diff/3600
 
     def _measure_empty(info, key):
         info[key] = None
@@ -190,13 +191,19 @@ def run(data_dir, out_dir, delta_minutes, quality):
                                   quality=quality, info=info)
         write_extracted_data(out_dir=out_dir, case=filepath.stem, data=data)
     progress.finish()
+
+    # Copy the exercises file as well
+    src = data_dir / "exercises" / "_all.csv"
+    dst = out_dir / "exercises.csv"
+    shutil.copy(src=src, dst=dst)
+
     print("Done!")
 
     info = pd.DataFrame(info).T
     info.index.names = ["Patient", "Mode", "Side"]
     for mode in info.index.levels[1]:
         for group in info.columns.levels[0]:
-            out_path = out_dir / f"filtering_{mode}_{group}.csv"
+            out_path = out_dir / f"summary_{mode}_{group}.csv"
             df = info.loc[pd.IndexSlice[:, mode], group]
             df = df.dropna(how="all", axis=1)
             df.to_csv(out_path)
