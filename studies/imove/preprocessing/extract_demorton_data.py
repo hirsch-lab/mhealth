@@ -38,6 +38,34 @@ def extract_data(df, delta_minutes):
     return df
 
 
+def filter_time_gaps(df, max_gap_hours, dataset_id):
+    def _first_loc_index_where(mask):
+        return next((idx for idx, x in zip(mask.index, mask) if x), None)
+    def _first_iloc_index_where(mask):
+        return next((idx for idx, x in zip(range(len(mask)), mask) if x), None)
+
+    diff = df["timestamp"].diff()
+    gaps = diff.dt.total_seconds() > (max_gap_hours*3600)
+    # idx is None if no gaps are present
+    # .loc[] is inclusive for both upper and lower bound.
+    # .iloc[] is not inclusive for upper bound (as usual)
+    # Consequences:
+    #   .loc[idx:] and .loc[:idx] overlap at idx!
+    #   .iloc[idx:] and .iloc[:idx] don't overlap
+    # Conclusion: better use iloc[]
+    idx = _first_iloc_index_where(gaps)
+    if idx is not None:
+        delta = diff.iloc[idx].total_seconds()/3600
+        gap = pd.Series(False, index=df.index)
+        gap[:idx] = True
+        msg = "Info: %-16s Found a gap of %3d hours, clipped %5d rows (%.3f%%)"
+        print(msg % (dataset_id+":", delta, sum(~gap), (~gap).mean()*100))
+        # tmp = df.copy()
+        # tmp.insert(1, "gap", gap)
+        df = df.loc[gap].copy()
+    return df
+
+
 def quality_filter_vital(df, quality):
     mask = (df[QUALITY_COLS] > quality).all(axis=1)
     mask &= (df["HR"] > 0)
@@ -83,29 +111,46 @@ def measure_info(key, case, group, df, info):
         assert side in ("left", "right")
         return mode, side
 
+    def _measure_stats(data, info, key, group, name):
+        info[key][(group, name, "mean")] = data.mean()
+        info[key][(group, name, "std")]  = data.std()
+        info[key][(group, name, "min")]  = data.min()
+        info[key][(group, name, "25%")]  = data.quantile(0.25)
+        info[key][(group, name, "50%")]  = data.median()
+        info[key][(group, name, "75%")]  = data.quantile(0.75)
+        info[key][(group, name, "max")]  = data.max()
+
     def _measure_vital(df, info, group, key):
         COLS = ["HR", "HRQ", "SpO2", "SpO2Q", "Activity",
                 "QualityClassification", "ObjTemp",]
         for col in COLS:
-            info[key][(group, col, "mean")] = df[col].mean()
-            info[key][(group, col, "std")] = df[col].std()
-            info[key][(group, col, "min")] = df[col].min()
-            info[key][(group, col, "25%")] = df[col].quantile(0.25)
-            info[key][(group, col, "50%")] = df[col].median()
-            info[key][(group, col, "75%")] = df[col].quantile(0.75)
-            info[key][(group, col, "max")] = df[col].max()
+            _measure_stats(data=df[col], info=info, key=key,
+                           group=group, name=col)
 
     def _measure_both(df, info, group, key, sr):
         n_samples = len(df)
         ts_min = df["timestamp"].min()
         ts_max = df["timestamp"].max()
         ts_diff = (ts_max-ts_min).total_seconds()
+        ts_delta = df["timestamp"].diff(periods=1).dt.total_seconds()/3600
 
         info[key][(group, "Counts", "nSamples")] = n_samples
         info[key][(group, "Time", "Start")] = ts_min
         info[key][(group, "Time", "End")] = ts_max
         info[key][(group, "Time", "ValidHours")] = n_samples/3600./sr
         info[key][(group, "Time", "TotalHours")] = ts_diff/3600
+        info[key][(group, "TimeGaps", "MaxGap")] = ts_delta.max()
+        info[key][(group, "TimeGaps", "nGaps>1m")]  = (ts_delta>(1/60)).sum()
+        info[key][(group, "TimeGaps", "nGaps>2m")]  = (ts_delta>(1/30)).sum()
+        info[key][(group, "TimeGaps", "nGaps>5m")]  = (ts_delta>(1/12)).sum()
+        info[key][(group, "TimeGaps", "nGaps>10m")] = (ts_delta>(1/6)).sum()
+        info[key][(group, "TimeGaps", "nGaps>30m")] = (ts_delta>(1/2)).sum()
+        info[key][(group, "TimeGaps", "nGaps>1h")]  = (ts_delta>1).sum()
+        info[key][(group, "TimeGaps", "nGaps>3h")]  = (ts_delta>3).sum()
+        info[key][(group, "TimeGaps", "nGaps>6h")]  = (ts_delta>6).sum()
+        info[key][(group, "TimeGaps", "nGaps>12h")] = (ts_delta>12).sum()
+        info[key][(group, "TimeGaps", "nGaps>24h")] = (ts_delta>24).sum()
+        info[key][(group, "TimeGaps", "nGaps>36h")] = (ts_delta>36).sum()
 
     def _measure_empty(info, key):
         info[key] = None
@@ -129,15 +174,18 @@ def measure_infos(case, group, data, info):
         measure_info(key=key, case=case, group=group, df=df, info=info)
 
 
-def extract_data_store(filepath, delta_minutes, quality, info):
+def extract_data_store(filepath, delta_minutes, quality, max_gap, info):
     # Structure: {pat_id}.h5/{mode}/{side}"
     store = pd.HDFStore(filepath, mode="r")
     case = filepath.stem
     data = {}
     for key in KEYS:
+        dataset_id = f"{filepath.stem}/{key}"
         if key not in store:
             continue
         df = store[key]
+        df = filter_time_gaps(df=df, max_gap_hours=max_gap,
+                              dataset_id=dataset_id)
 
         # Measure the effect of quality filtering on the entire data, that
         # is, before extraction of De Morton data. Only do this for vital
@@ -172,7 +220,7 @@ def write_extracted_data(out_dir, case, data):
         write_hdf(df=df, path=path_hdf, key=key)
 
 
-def run(data_dir, out_dir, delta_minutes, quality):
+def run(data_dir, out_dir, delta_minutes, quality, max_gap):
     files = list(sorted((data_dir/"store").glob("*.h5")))
     if not files:
         print("Error: No files in data folder:", data_dir)
@@ -188,7 +236,8 @@ def run(data_dir, out_dir, delta_minutes, quality):
         progress.update(i, file=filepath.stem)
         data = extract_data_store(filepath=filepath,
                                   delta_minutes=delta_minutes,
-                                  quality=quality, info=info)
+                                  quality=quality, max_gap=max_gap,
+                                  info=info)
         write_extracted_data(out_dir=out_dir, case=filepath.stem, data=data)
     progress.finish()
 
@@ -214,5 +263,7 @@ if __name__ == "__main__":
     out_dir = Path("../results/extraction_new")
     delta_minutes = 15
     quality = 50
+    max_gap = 36  # Maximal tolerated gap in hours
     run(data_dir=data_dir, out_dir=out_dir,
-        delta_minutes=delta_minutes, quality=quality)
+        delta_minutes=delta_minutes,
+        quality=quality, max_gap=max_gap)
