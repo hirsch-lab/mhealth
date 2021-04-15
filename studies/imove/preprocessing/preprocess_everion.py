@@ -170,12 +170,12 @@ def read_data(path, col_lookup, mode):
 
 
 @Timer(text=_timer_format("write .csv"), logger=DEFAULT_LOGGER)
-def write_csv_timed(df, out_path, **kwargs):
+def write_csv_timed(df, path, **kwargs):
     return write_csv(df=df, path=path, index=False, **kwargs)
 
 
 @Timer(text=_timer_format("write .hdf"), logger=DEFAULT_LOGGER)
-def write_hdf_timed(df, out_path, key=None, **kwargs):
+def write_hdf_timed(df, path, key=None, **kwargs):
     return write_hdf(df=df, path=path, key=key, **kwargs)
 
 

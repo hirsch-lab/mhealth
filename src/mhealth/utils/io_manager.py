@@ -331,7 +331,7 @@ class IOManager:
                 #     out_path.parent.mkdir(parents=True)
                 if not self._out_dir.is_dir():
                     self._out_dir.mkdir(parents=True)
-                ret = func(data, out_path=out_path, **kwargs)
+                ret = func(data, path=out_path, **kwargs)
                 rets[target] = ret
                 status &= bool(ret)
             else:
