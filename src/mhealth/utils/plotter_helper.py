@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
+import seaborn as sns
+import matplotlib as mpl
 from pathlib import Path
 from datetime import datetime
-
-import matplotlib
 import matplotlib.pyplot as plt
 
 from .signal_properties import SignalProperties
@@ -12,7 +12,7 @@ from .file_helper import ensure_counted_path
 
 from typing import Union, Tuple, Optional
 PathLike = Union[str, Path]
-OptionalFigure = Optional[matplotlib.figure.Figure]
+OptionalFigure = Optional[mpl.figure.Figure]
 
 
 def save_figure(path: PathLike="./plot.pdf",
@@ -50,6 +50,13 @@ def save_figure(path: PathLike="./plot.pdf",
                 dpi=dpi,
                 **kwargs)
     return path
+
+
+def setup_plotting():
+    sns.set_theme(style="ticks", palette="pastel")
+    # Make text in PDFs editable in Adobe Illustrator
+    import matplotlib as mpl
+    mpl.rcParams["pdf.fonttype"] = 42
 
 
 class PlotterHelper:
