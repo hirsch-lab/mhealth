@@ -49,17 +49,16 @@ def plot_qualities(df_before, df_after, out_dir):
                            data=df, size=4, color="gray",
                            linewidth=0, alpha=0.4, ax=ax)
     hbox.legend_.set_title(None)
-
     handles, labels = ax.get_legend_handles_labels()
-    n = 2
+    n = df["Label"].nunique()
     l = plt.legend(handles[0:n], labels[0:n],
                    bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    ax.grid(axis="y")
     plt.tight_layout()
     save_figure(out_dir/"qualities.pdf")
 
 
-def plot_time_recorded(df, exercises, out_dir):
-    ncols=20
+def plot_time_recorded(df, exercises, out_path, ncols=20):
 
     # Format dataframe
     df = df.loc[:,"Time"].copy()
@@ -82,7 +81,8 @@ def plot_time_recorded(df, exercises, out_dir):
     exercises["Dataset"] = dataset_id(df=exercises)
     exercises.loc[:, "DeMortonStart"] = delta.values
 
-    fig, axes = plt.subplots(nrows=nrows, ncols=1)
+    ylim = 80 # df["TotalHours"].max() * 1.05
+    fig, axes = plt.subplots(nrows=nrows, ncols=1, figsize=(12,7))
     for i, dfrow in df.groupby("Row"):
 
         dfrow = dfrow.melt(id_vars=["Dataset"],
@@ -92,19 +92,21 @@ def plot_time_recorded(df, exercises, out_dir):
                          data=dfrow, ax=axes[i], palette=["lightgray", "b"],
                          dodge=False)
         dfex = exercises.loc[exercises["Dataset"].isin(dfrow["Dataset"])]
-        ax = sns.stripplot(x="Dataset", y="DeMortonStart", data=dfex,
-                           ax=axes[i], facecolor="k", color="k", size=4, linewidth=1,
-                           marker="_", jitter=False)
-        ax.set_ylim([0, df["TotalHours"].max()])
+        if False:
+            # Plot the start times of the 3 De Morton excercise sessions
+            ax = sns.stripplot(x="Dataset", y="DeMortonStart", data=dfex,
+                               ax=axes[i], facecolor="k", color="k", size=4,
+                               linewidth=1, marker="_", jitter=False)
+        ax.set_ylim([0, ylim])
         ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
-        # ax.legend(bbox_to_anchor=(1.05, 1),
-        #           loc=2, borderaxespad=0.).set_visible(i==0)
+        ax.legend(bbox_to_anchor=(1.02, 1),
+                  loc=2, borderaxespad=0.).set_visible(i==0)
         ax.set_xlabel(None)
         ax.grid(axis="y")
 
     fig.subplots_adjust(hspace=0.5)
     fig.tight_layout()
-    plt.show()
+    save_figure(out_path, fig=fig)
 
 
 def plot_time_gaps(df_before, df_after, out_dir):
@@ -114,32 +116,33 @@ def plot_time_gaps(df_before, df_after, out_dir):
         box_data = pd.concat([total, gaps["MaxGap"]], axis=1)
         box_data["FilterStatus"] = kind
         gaps = gaps.drop("MaxGap", axis=1)
+        gaps_rel = gaps.div(total, axis=0)
         gaps["FilterStatus"] = kind
-        return box_data, gaps
+        gaps_rel["FilterStatus"] = kind
+        return box_data, gaps, gaps_rel
 
     def _plot_max_gap(data, filepath):
         fig, ax = plt.subplots()
         hbox = sns.boxplot(x="Measure", y="Hours", hue="FilterStatus",
-                           data=box_data, palette=["m", "g"], ax=ax)
+                           data=data, palette=["m", "g"], ax=ax)
         hstrip = sns.stripplot(x="Measure", y="Hours", hue="FilterStatus",
-                               data=box_data, dodge=True, size=4, color="gray",
+                               data=data, dodge=True, size=4, color="gray",
                                linewidth=0, alpha=0.4, ax=ax)
-        n = len(box_data["FilterStatus"].unique())
+        n = data["FilterStatus"].nunique()
         handles, labels = ax.get_legend_handles_labels()
         l = plt.legend(handles[0:n], labels[0:n], title="Filter Status")
         ax.grid(axis="y")
         ax.set_xlabel(None)
         save_figure(filepath, fig=fig)
-        #plt.show()
 
     def _plot_gap_counts(data, filepath):
         fig, ax = plt.subplots()
         hbox = sns.boxplot(x="Measure", y="Counts", hue="FilterStatus",
-                           data=gaps_data, palette=["m", "g"], ax=ax)
+                           data=data, palette=["m", "g"], ax=ax)
         hstrip = sns.stripplot(x="Measure", y="Counts", hue="FilterStatus",
-                               data=gaps_data, dodge=True, size=4, color="gray",
+                               data=data, dodge=True, size=4, color="gray",
                                linewidth=0, alpha=0.4, ax=ax)
-        n = len(box_data["FilterStatus"].unique())
+        n = data["FilterStatus"].nunique()
         handles, labels = ax.get_legend_handles_labels()
         l = plt.legend(handles[0:n], labels[0:n], title="Filter Status")
         ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
@@ -149,24 +152,26 @@ def plot_time_gaps(df_before, df_after, out_dir):
         save_figure(filepath, fig=fig)
 
 
-    box_data_before, gaps_before = _format_data(df_before, kind="before")
-    box_data_after, gaps_after = _format_data(df_after, kind="after")
-    box_data = pd.concat([box_data_before, box_data_after], axis=0)
-    gaps_data = pd.concat([gaps_before, gaps_after], axis=0)
+    box_data_b, gaps_b, gaps_brel = _format_data(df_before, kind="before")
+    box_data_a, gaps_a, gaps_arel = _format_data(df_after, kind="after")
+    box_data = pd.concat([box_data_b, box_data_a], axis=0)
+    gaps_data = pd.concat([gaps_b, gaps_a], axis=0)
+    gaps_data_rel = pd.concat([gaps_brel, gaps_arel], axis=0)
     box_data = box_data.melt(id_vars=["FilterStatus"],
                              value_vars=["TotalHours", "MaxGap"],
                              var_name="Measure", value_name="Hours")
     gaps_data = gaps_data.melt(id_vars=["FilterStatus"],
                                var_name="Measure", value_name="Counts")
+    gaps_data_rel = gaps_data_rel.melt(id_vars=["FilterStatus"],
+                                       var_name="Measure", value_name="Counts")
     _plot_max_gap(data=box_data, filepath=out_dir/"max_gaps.pdf")
-    _plot_gap_counts(data=gaps_data, filepath=out_dir/"gap_counts.pdf")
+    _plot_gap_counts(data=gaps_data, filepath=out_dir/"gap_counts_full.pdf")
+    _plot_gap_counts(data=gaps_data_rel, filepath=out_dir/"gap_counts_rel_full.pdf")
     gaps_data = gaps_data[gaps_data["Measure"]!="nGaps>1m"]
+    gaps_data_rel = gaps_data_rel[gaps_data_rel["Measure"]!="nGaps>1m"]
     _plot_gap_counts(data=gaps_data, filepath=out_dir/"gap_counts.pdf")
-    plt.show()
+    _plot_gap_counts(data=gaps_data_rel, filepath=out_dir/"gap_counts_rel.pdf")
 
-
-
-    #g = sns.catplot(x="time", y="pulse", hue="kind", data=exercise)
 
 
 def run(data_dir, out_dir):
@@ -178,12 +183,16 @@ def run(data_dir, out_dir):
 
     setup_plotting()
     print("Plotting qualities...")
-    #plot_qualities(df_before=df_before, df_after=df_after, out_dir=out_dir)
+    plot_qualities(df_before=df_before, df_after=df_after, out_dir=out_dir)
     print("Plotting time recorded...")
-    #plot_time_recorded(df=df_after, exercises=exercises, out_dir=out_dir)
+    plot_time_recorded(df=df_before, exercises=exercises,
+                       out_path=out_dir/"time_recorded_unfiltered.pdf")
+    plot_time_recorded(df=df_after, exercises=exercises,
+                       out_path=out_dir/"time_recorded_filtered.pdf")
     print("Plotting time gaps...")
     plot_time_gaps(df_before=df_before, df_after=df_after, out_dir=out_dir)
     print("Done!")
+    #plt.show()
 
 
 if __name__ == "__main__":
