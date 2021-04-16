@@ -9,6 +9,7 @@ Output: A single table per patient with proper format
 """
 
 import re
+import argparse
 import itertools
 import pandas as pd
 from pathlib import Path
@@ -19,7 +20,9 @@ from mhealth.utils.commons import create_progress_bar, print_title
 from mhealth.patient.imove_label_loader import load_labels
 from mhealth.utils.file_helper import write_csv, write_hdf
 
-def run(data_dir, out_dir):
+def run(args):
+    data_dir = Path(args.in_dir)
+    out_dir = Path(args.out_dir)
     print_title("Processing De Morton data:")
     print("    data_dir:", data_dir)
     print("    out_dir:", out_dir)
@@ -63,8 +66,27 @@ def run(data_dir, out_dir):
     print("Done!")
 
 
+def parse_args():
+    description = ("Collect and format timing measurements for "
+                   "the De Morton exercises.")
+    formatter = argparse.RawDescriptionHelpFormatter
+    parser = argparse.ArgumentParser(add_help=False,
+                                     formatter_class=formatter,
+                                     description=description)
+    parser.add_argument("-h", "--help", action="help",
+                        help="Show this help text")
+    parser.add_argument("-i", "--in-dir", required=True,
+                        help="Input directory")
+    parser.add_argument("-o", "--out-dir", default="../output/preprocessed",
+                        help="Output directory")
+    parser.set_defaults(func=run)
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    args.func(args)
+
+
 if __name__ == "__main__":
-    data_root = Path("/Users/norman/workspace/education/phd/data/wearables")
-    data_dir = data_root / "studies/usb-imove/original/exercises"
-    out_dir = Path("../results/preprocessed_new")
-    run(data_dir=data_dir, out_dir=out_dir)
+    main()

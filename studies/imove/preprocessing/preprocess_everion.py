@@ -4,6 +4,7 @@ University Hospital Basel.
 """
 
 import shutil
+import argparse
 import warnings
 import pandas as pd
 from pathlib import Path
@@ -256,7 +257,11 @@ def preprocess(mode, data_dir, glob_expr,
                      iom=iom)
 
 
-def run(data_dir, out_dir):
+def run(args):
+    data_dir = Path(args.in_dir)
+    out_dir = Path(args.out_dir)
+    with_csv = args.csv
+
     print_title("Processing Everion data:")
     print("    data_dir:", data_dir)
     print("    out_dir:", out_dir)
@@ -285,12 +290,14 @@ def run(data_dir, out_dir):
     }
     # Write methods.
     target_writers = {
-        #".csv": write_csv_timed,
         ".h5": write_hdf_timed
     }
+    if with_csv:
+        target_writers[".csv"] = write_csv_timed
+
     # Construct filenames out of parts.
     target_names = {
-        ".csv": "{pat_id}{side_short}-{mode}.csv",
+        ".csv": "sensor/{pat_id}{side_short}-{mode}.csv",
         ".h5":  "store/{pat_id}.h5/{mode}/{side}"
     }
     # Works only for target .csv. (Checks inside a .h5 file not possible yet)
@@ -342,9 +349,28 @@ def run(data_dir, out_dir):
                    iom=iom)
 
 
-if __name__ == "__main__":
-    data_root = Path("/Users/norman/workspace/education/phd/data/wearables")
-    data_dir = data_root / "studies/usb-imove/original/sensor"
-    out_dir = Path("../results/preprocessed_new")
-    run(data_dir=data_dir, out_dir=out_dir)
+def parse_args():
+    description = ("Collect and format data from Everion devices.")
+    formatter = argparse.RawDescriptionHelpFormatter
+    parser = argparse.ArgumentParser(add_help=False,
+                                     formatter_class=formatter,
+                                     description=description)
+    parser.add_argument("-h", "--help", action="help",
+                        help="Show this help text")
+    parser.add_argument("-i", "--in-dir", required=True,
+                        help="Input directory")
+    parser.add_argument("-o", "--out-dir", default="../output/preprocessed",
+                        help="Output directory")
+    parser.add_argument("--csv", action="store_true",
+                        help="Enable .csv output")
+    parser.set_defaults(func=run)
+    return parser.parse_args()
 
+
+def main():
+    args = parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()

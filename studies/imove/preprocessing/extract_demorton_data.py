@@ -1,4 +1,5 @@
 import shutil
+import argparse
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -220,7 +221,13 @@ def write_extracted_data(out_dir, case, data):
         write_hdf(df=df, path=path_hdf, key=key)
 
 
-def run(data_dir, out_dir, delta_minutes, quality, max_gap):
+def run(args):
+    data_dir = Path(args.in_dir)
+    out_dir = Path(args.out_dir)
+    delta_minutes = args.margin
+    quality = args.quality
+    max_gap = args.max_gap
+
     files = list(sorted((data_dir/"store").glob("*.h5")))
     if not files:
         print("Error: No files in data folder:", data_dir)
@@ -258,12 +265,36 @@ def run(data_dir, out_dir, delta_minutes, quality, max_gap):
             df.to_csv(out_path)
 
 
+def parse_args():
+    description = ("Collect and format timing measurements for "
+                   "the De Morton exercises.")
+    formatter = argparse.RawDescriptionHelpFormatter
+    parser = argparse.ArgumentParser(add_help=False,
+                                     formatter_class=formatter,
+                                     description=description)
+    parser.add_argument("-h", "--help", action="help",
+                        help="Show this help text")
+    parser.add_argument("-i", "--in-dir", required=True,
+                        help="Input directory")
+    parser.add_argument("-o", "--out-dir", default="../output/preprocessed",
+                        help="Output directory")
+    parser.add_argument("--quality", default=50, type=float,
+                        help="Threshold for quality filtering")
+    parser.add_argument("--margin", default=15, type=float,
+                        help=("Time margin in minutes to collect extra before "
+                              "and after the De Morton exercise sessions."))
+    parser.add_argument("--max-gap", default=36, type=float,
+                        help=("Maximal time gap tolerated, in hours. Data "
+                              "after an extremal time gap are clipped."))
+    parser.set_defaults(func=run)
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    args.func(args)
+
+
 if __name__ == "__main__":
-    data_dir = Path("../results/preprocessed")
-    out_dir = Path("../results/extraction_new")
-    delta_minutes = 15
-    quality = 50
-    max_gap = 36  # Maximal tolerated gap in hours
-    run(data_dir=data_dir, out_dir=out_dir,
-        delta_minutes=delta_minutes,
-        quality=quality, max_gap=max_gap)
+    main()
+
