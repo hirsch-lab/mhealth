@@ -1,18 +1,46 @@
-## Data preprocessing
+## iMove data preprocessing
 
-To trigger the complete preprocessing procedure
+To trigger the complete preprocessing: 
 
 ```bash
-python "preprocess_exercises.py"    # a couple of seconds
-python "preprocess_everion.py"      # 1-2 hours
-python "extract_demorton_data.py"   # a couple of minutes
+# Step 1 (runs 2-3 minutes)
+python "preprocess_exercises.py" \
+            --in-dir "$IMOVE_DATA/original/exercises/" \
+            --out-dir "../output/preprocessed/"
+# Step 2 (runs 1-2 hours)
+python "preprocess_everion.py" \
+            --in-dir "$IMOVE_DATA/original/sensor/" \
+            --out-dir "../output/preprocessed/"
+# Step 3 (runs 15-20 minutes)
+python "extract_demorton_data.py" \
+            --in-dir "../output/preprocessed/" \
+            --out-dir "../output/extraction/quality50" \
+            --quality=50
 ```
+
+<!--
+IMOVE_DATA="$DATA_ROOT/wearables/studies/usb-imove"
+-->
+
+`$IMOVE_DATA` points to the root directory of the iMove project (as found on our data repository). More specifically, the folder is assumed to have the following substructure:
+
+- **original/exercises/**: contains .xlsx files with manually collected data about the duration of De Morton exercises
+- **original/sensor/**: contains the original .csv files representing the readouts of the Everion devices
+
+
 
 
 ### 1. De Morton exercises
 
 ```bash
-python "preprocess_exercises.py"
+python "preprocess_exercises.py" \
+            --in-dir "$IMOVE_DATA/original/exercises/" \
+            --out-dir "../output/preprocessed/"
+
+# Output:
+#   .../exercises/_all.csv: collection of all exercise data
+#   .../exercises/:         .csv data per patient
+#   .../store/:             .h5 data, with HDF-key "/exercises"
 ```
 
 - The patients performed the De Morton exercises on three (consecutive) days.
@@ -26,15 +54,26 @@ python "preprocess_exercises.py"
         - df → default
         - def → default
         - defaukt → default
-- **Output** is generated in the output directory:
-    - outdir/exercises: .csv data
-    - outdir/store: .h5 data
+
 
 
 ### 2. Sensor data
 
 ```bash
-python "preprocess_everion.py"
+python "preprocess_everion.py" \
+            --in-dir "$IMOVE_DATA/original/sensor/" \
+            --out-dir "../output/preprocessed/"
+  
+# Options:
+#   --csv:          Create also .csv output (in addition to .h5)
+#
+# Output:
+#   .../store/:     Updates .h5 data from step 1 with new HDF-keys:
+#                   "/vital/left": vital sign data from left device
+#                   "/vital/right": vital sign data from right device
+#                   "/raw/left": accelerometer data from left device
+#                   "/raw/right": accelerometer data from right device
+#   .../sensor/:    Optional, folder with .csv data
 ```
 
 - Two different types of readouts are available: the readouts of vital signals (sampling at 1Hz), and the raw sensor data (sampling at 50Hz). The latter includes also data from the optical sensors for the PPG (photoplethysmogram, pulse oximetry). Several vital signs are derived from those optical signals.
@@ -83,27 +122,49 @@ I decided to go with (1), assuming that the data in the correct format is correc
     - redcurr → RedCurr
     - IRcurr → IRCurr
     - ADCoffs → ADCoeffs
-- The timing measurements from the exercises (preprocessing step 1) are also merged into the tables (both raw and vital)
-
+- See the file [everion_columns.csv](https://github.com/hirsch-lab/mhealth/blob/feature/imove_processing/studies/imove/preprocessing/everion_columns.csv), it determines the columns of the resulting DataFrames, alongside with the dtypes for those columns.
+- Finally, the information about the the De Morton exercise session (c.f. preprocessing step 1) are also merged into the tables (both raw and vital). This adds three columns: 
+    - DeMorton: boolean indicating if a De Morton exercise is currently executed
+    - DeMortonLabel: str identifying the De Morton exercise, or None
+    - DeMortonDay: int identifying the De Morton session, or None
 
 ### 3. De Morton data extraction
 
 ```bash
-python "extract_demorton_data.py"
+python "extract_demorton_data.py" \
+            --in-dir "../output/preprocessed/" \
+            --out-dir "../output/extraction/quality50" \
+            --quality=50
+
+# Parameters:
+#   --quality:          Threshold for quality filtering. Must be a value 
+#                       between 0 and 100. Default: 50
+#   --margin:           Determines the amount of data extracted before and
+#                       after the De Morton exercise sessions. Measured in 
+#                       minutes. Default: 15 
+#   --max-gap:          Maximal time gap tolerated, in hours. Data recorded
+#                       after such an extremal time gap are clipped. 
+#                       Default: 36
+#
+# Output:
+#   .../store/:         .h5 stores with extracted data per patient. The 
+#                       stores contain the following keys: /exercises/, 
+#                       /vital/left, /vital/right, /raw/left, /raw/right
+#   .../csv/:           Folder with .csv data per patient
+#   .../exercises.csv:  Identifcal with the _all.csv from step 1
+#   .../summary*.csv:   Statistical summaries for some metrics, evaluated
+#                       before or after quality filtering.
+
 ```
 
-- In this third step, the data of interest is extracted
-- Main parameters:
-    - `delta_minutes`: time margin between first and last De Morton measurement.
-    - `quality`: 
+- In this third step, the data of interest is extracted, defined by the (usually) three De Morton exercise sessions. The time windows are read from exercises collection "exercises/_all.csv" from step 1.
+- In some cases, the Everion files contain data recorded several days after the last De Morton exercise session. This extra data is clipped away.
 - Quality filtering:
-    - This is always true: If the vital data is missing, the raw sensor data is 
-    - The converse does not hold: if the raw data is missing, it is possible that the vital data is available.
-    - **Question**: shall we discard also the vital data if the sensor data is missing? Currently, we keep it.
+    - This holds true always: If the vital data is missing, the raw sensor data is also missing.
+    - The converse does not: if the raw data is missing, it is possible that the vital data is available.
+    - (**Question**: shall we discard the vital data if the sensor data is missing? Currently, we keep it.)
     - Filtering rules: 
         - Heart rate > 0 and 
         - HRQ > quality and 
         - QualityClassification > quality
-- The data is stored in separate .h5 stores
-- **Output** is generated in the output directory:
-    - outdir/extraction/: .h5 data
+
