@@ -11,15 +11,15 @@ from pathlib import Path
 from codetiming import Timer
 
 import context
-from mhealth.utils import IOManager
-from mhealth.patient import merge_labels
+from mhealth.utils.io_manager import IOManager
 from mhealth.utils.commons import (print_title,
                                    print_subtitle,
                                    catch_warnings,
                                    create_progress_bar)
 from mhealth.utils.context_info import dump_context
 from mhealth.utils.file_helper import write_csv, write_hdf
-from mhealth.data_analysis import filter_bad_quality_mixed_vital_raw
+from mhealth.patient.imove_label_loader import merge_labels
+from mhealth.data_analysis.quality_filter import filter_bad_quality_mixed_vital_raw
 
 # Preprocessing:
 #   - read data
