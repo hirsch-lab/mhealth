@@ -1,3 +1,4 @@
+import argparse
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -5,6 +6,8 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 import context
+from mhealth.utils.commons import print_title
+from mhealth.utils.context_info import dump_context
 from mhealth.utils.plotter_helper import save_figure, setup_plotting
 
 
@@ -174,14 +177,24 @@ def plot_time_gaps(df_before, df_after, out_dir):
 
 
 
-def run(data_dir, out_dir):
+def run(args):
+    data_dir = Path(args.in_dir)
+    out_dir = Path(args.out_dir)
+    show = args.interactive
+    dump_context(out_dir=out_dir)
+    setup_plotting()
+
+    print_title("Analyzing general characteristics of Everion data:")
+    print("    data_dir:", data_dir)
+    print("    out_dir:", out_dir)
+    print()
+
     path_before = data_dir / "summary_vital_original.csv"
     path_after = data_dir / "summary_vital_original_filtered.csv"
     df_before = read_summary(path_before)
     df_after = read_summary(path_after)
     exercises = read_exercises(data_dir / "exercises.csv")
 
-    setup_plotting()
     print("Plotting qualities...")
     plot_qualities(df_before=df_before, df_after=df_after, out_dir=out_dir)
     print("Plotting time recorded...")
@@ -192,10 +205,34 @@ def run(data_dir, out_dir):
     print("Plotting time gaps...")
     plot_time_gaps(df_before=df_before, df_after=df_after, out_dir=out_dir)
     print("Done!")
-    #plt.show()
+
+    if show:
+        plt.show()
+
+
+def parse_args():
+    description = ("Visualize global characteristics of the original "
+                   "and filtered data.")
+    formatter = argparse.RawDescriptionHelpFormatter
+    parser = argparse.ArgumentParser(add_help=False,
+                                     formatter_class=formatter,
+                                     description=description)
+    parser.add_argument("-h", "--help", action="help",
+                        help="Show this help text")
+    parser.add_argument("-i", "--in-dir", required=True,
+                        help="Input directory")
+    parser.add_argument("-o", "--out-dir", help="Output directory",
+                        default="../output/analysis/everion_data")
+    parser.add_argument("--interactive", action="store_true",
+                        help="Show the plots")
+    parser.set_defaults(func=run)
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    args.func(args)
 
 
 if __name__ == "__main__":
-    data_dir = Path("../results/extraction")
-    out_dir = Path("../results/analysis/everion_data")
-    run(data_dir=data_dir, out_dir=out_dir)
+    main()
