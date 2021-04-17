@@ -17,6 +17,7 @@ from mhealth.utils.commons import (print_title,
                                    print_subtitle,
                                    catch_warnings,
                                    create_progress_bar)
+from mhealth.utils.context_info import dump_context
 from mhealth.utils.file_helper import write_csv, write_hdf
 from mhealth.data_analysis import filter_bad_quality_mixed_vital_raw
 
@@ -261,6 +262,7 @@ def run(args):
     data_dir = Path(args.in_dir)
     out_dir = Path(args.out_dir)
     with_csv = args.csv
+    dump_context(out_dir=out_dir)
 
     print_title("Processing Everion data:")
     print("    data_dir:", data_dir)

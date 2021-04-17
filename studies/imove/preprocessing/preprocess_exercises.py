@@ -19,10 +19,13 @@ import context
 from mhealth.utils.commons import create_progress_bar, print_title
 from mhealth.patient.imove_label_loader import load_labels
 from mhealth.utils.file_helper import write_csv, write_hdf
+from mhealth.utils.context_info import dump_context
 
 def run(args):
     data_dir = Path(args.in_dir)
     out_dir = Path(args.out_dir)
+    dump_context(out_dir=out_dir)
+
     print_title("Processing De Morton data:")
     print("    data_dir:", data_dir)
     print("    out_dir:", out_dir)

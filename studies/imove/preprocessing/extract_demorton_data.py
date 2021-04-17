@@ -7,6 +7,7 @@ from datetime import timedelta
 from collections import defaultdict
 
 import context
+from mhealth.utils.context_info import dump_context
 from mhealth.utils.commons import create_progress_bar
 from mhealth.utils.file_helper import ensure_dir, write_csv, write_hdf
 
@@ -227,6 +228,7 @@ def run(args):
     delta_minutes = args.margin
     quality = args.quality
     max_gap = args.max_gap
+    dump_context(out_dir=out_dir)
 
     files = list(sorted((data_dir/"store").glob("*.h5")))
     if not files:
