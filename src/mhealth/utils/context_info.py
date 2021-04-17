@@ -1,5 +1,3 @@
-
-
 import os
 import sys
 import git                  # package: GitPython
@@ -32,14 +30,15 @@ INFO_TEMPLATE = \
     "----------------------------\n\n" +         \
     "System:\n" +                                \
     "-------\n" +                                \
-    "       OS: <OS>\n" +                        \
-    "     Arch: <ARCH>\n" +                      \
-    "    Cores: <CORES>\n" +                     \
-    "     Node: <NODE>\n" +                      \
-    "     User: <USER>\n" +                      \
-    "   Python: <PYTHON>\n"                      \
-    "    NumPy: <NUMPY>\n"                       \
-    "   Pandas: <PANDAS>\n\n"                      \
+    "         OS: <OS>\n" +                      \
+    "       Arch: <ARCH>\n" +                    \
+    "      Cores: <CORES>\n" +                   \
+    "       Node: <NODE>\n" +                    \
+    "       User: <USER>\n" +                    \
+    "     Python: <PYTHON>\n"                    \
+    "      NumPy: <NUMPY>\n"                     \
+    "     Pandas: <PANDAS>\n"                    \
+    " Matplotlib: <MATPLOTLIB>\n\n"              \
     "Console:\n" +                               \
     "--------\n" +                               \
     "<COMMAND>\n\n" +                            \
@@ -133,6 +132,7 @@ class ContextInfo:
         self.system["python"] = sys.version.split("\n")[0]
         self.system["numpy"] = get_module_version("numpy")
         self.system["pandas"] = get_module_version("pandas")
+        self.system["matplotlib"] = get_module_version("matplotlib")
         self.time = datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S")
 
     @staticmethod
@@ -164,10 +164,12 @@ class ContextInfo:
         git_hash = get_git_hash(path_or_repo=self.repo,
                                 with_repo_name=True)
         author = " ".join(map(str.capitalize, self.system["user"].split()))
+        python = sys.executable  # Path(sys.executable).resolve()
+        command = str(python) + " " + " ".join(sys.argv)
         self._fill_info_tag("<AUTHOR>", author)
         self._fill_info_tag("<DATE>", self.time)
         self._fill_info_tag("<GIT-HASH>", git_hash)
-        self._fill_info_tag("<COMMAND>", " ".join(sys.argv))
+        self._fill_info_tag("<COMMAND>", command)
         self._fill_info_tag("<OS>", self.system["os"])
         self._fill_info_tag("<ARCH>", self.system["arch"])
         self._fill_info_tag("<CORES>", self.system["cores"])
@@ -176,6 +178,7 @@ class ContextInfo:
         self._fill_info_tag("<PYTHON>", self.system["python"])
         self._fill_info_tag("<NUMPY>", self.system["numpy"])
         self._fill_info_tag("<PANDAS>", self.system["pandas"])
+        self._fill_info_tag("<MATPLOTLIB>", self.system["matplotlib"])
         if notes is not None:
             self._fill_info_tag("<NOTES>", notes)
 
