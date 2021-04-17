@@ -5,12 +5,12 @@ from ..utils import testing
 from ..utils.io_manager import (IOManager, extract_infos)
 
 
-def write_csv(data, out_path):
-    #print("Writing CSV %s..." % out_path)
-    return out_path
-def write_hdf(data, out_path):
-    #print("Writing HDF %s..." % out_path)
-    return out_path
+def write_csv(data, path):
+    #print("Writing CSV %s..." % path)
+    return path
+def write_hdf(data, path):
+    #print("Writing HDF %s..." % path)
+    return path
 
 
 class TestExtractInfos(testing.TestCase):
