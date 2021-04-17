@@ -7,6 +7,7 @@ from datetime import timedelta
 from collections import defaultdict
 
 import context
+from mhealth.utils.commons import print_title
 from mhealth.utils.context_info import dump_context
 from mhealth.utils.commons import create_progress_bar
 from mhealth.utils.file_helper import ensure_dir, write_csv, write_hdf
@@ -230,6 +231,11 @@ def run(args):
     max_gap = args.max_gap
     dump_context(out_dir=out_dir)
 
+    print_title("Extracting De Morton data:")
+    print("    data_dir:", data_dir)
+    print("    out_dir:", out_dir)
+    print()
+
     files = list(sorted((data_dir/"store").glob("*.h5")))
     if not files:
         print("Error: No files in data folder:", data_dir)
@@ -268,8 +274,7 @@ def run(args):
 
 
 def parse_args():
-    description = ("Collect and format timing measurements for "
-                   "the De Morton exercises.")
+    description = ("Extract data for the De Morton exercise sessions.")
     formatter = argparse.RawDescriptionHelpFormatter
     parser = argparse.ArgumentParser(add_help=False,
                                      formatter_class=formatter,
@@ -278,7 +283,7 @@ def parse_args():
                         help="Show this help text")
     parser.add_argument("-i", "--in-dir", required=True,
                         help="Input directory")
-    parser.add_argument("-o", "--out-dir", default="../output/preprocessed",
+    parser.add_argument("-o", "--out-dir", default="../output/extracted",
                         help="Output directory")
     parser.add_argument("--quality", default=50, type=float,
                         help="Threshold for quality filtering")

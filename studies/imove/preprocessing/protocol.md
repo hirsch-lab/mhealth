@@ -14,7 +14,7 @@ python "preprocess_everion.py" \
 # Step 3 (runs 15-20 minutes)
 python "extract_demorton_data.py" \
             --in-dir "../output/preprocessed/" \
-            --out-dir "../output/extraction/quality50" \
+            --out-dir "../output/extracted/quality50" \
             --quality=50
 ```
 
@@ -133,7 +133,7 @@ I decided to go with (1), assuming that the data in the correct format is correc
 ```bash
 python "extract_demorton_data.py" \
             --in-dir "../output/preprocessed/" \
-            --out-dir "../output/extraction/quality50" \
+            --out-dir "../output/extracted/quality50" \
             --quality=50
 
 # Parameters:
