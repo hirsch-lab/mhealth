@@ -23,9 +23,12 @@ def load_labels(filepath, tz_to_zurich=True):
 
     # Fix typos in the manually created files
     df["Task"] = df["Task"].str.lower()
+    # Special labels:
+    #   - temp: timestamp at which temperature measurement was taken
+    #   - default: identifies faulty measurements, should be ignored.
     df["Task"] = df["Task"].replace({"t": "temp",
                                      "temo": "temp",
-                                     #"fault" : "default",  # ????????
+                                     "fault" : "default",
                                      "df": "default",
                                      "def": "default",
                                      "defaukt": "default",
