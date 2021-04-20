@@ -21,15 +21,21 @@ from mhealth.utils.file_helper import write_csv, write_hdf
 from mhealth.patient.imove_label_loader import merge_labels
 from mhealth.data_analysis.quality_filter import filter_bad_quality_mixed_vital_raw
 
-# Preprocessing:
-#   - read data
-#   - extract columns of interest
-#   - keep timestamps in UTC
-#   x remove all empty lines
-#   - apply quality filter
-#   - add de Morton mobility index/label
-#   - store in .csv or .h5 format
-#   - fix problem of shifted columns
+
+# Columns in vital sign data (at 1Hz)
+VITAL_COLS = [
+    "timestamp", "HR", "HRQ", "SpO2", "SpO2Q", "BloodPressure",
+    "BloodPerfusion", "Activity", "Classification",
+    "QualityClassification", "RespRate", "HRV", "LocalTemp",
+    "ObjTemp", "DeMortonLabel", "DeMortonDay", "DeMorton",
+]
+
+# Columns in raw sensor data (at 50Hz)
+RAW_COLS = [
+    "timestamp", "AX", "AY", "AZ",
+    "DeMortonLabel", "DeMortonDay", "DeMorton"
+]
+
 
 DEFAULT_LOGGER=None
 #DEFAULT_LOGGER=print
@@ -307,12 +313,6 @@ def run(args):
 
     if True:
         print_subtitle("Vital signals (no quality filtering)")
-        use_cols = [ "timestamp", "HR", "HRQ", "SpO2", "SpO2Q", "BloodPressure",
-                     "BloodPerfusion", "Activity", "Classification",
-                     "QualityClassification", "RespRate", "HRV", "LocalTemp",
-                     "ObjTemp",
-                     "DeMortonLabel", "DeMortonDay", "DeMorton",
-                    ]
         iom = IOManager(out_dir=out_dir,
                         info_patterns=info_patterns,
                         info_transformers=info_transformers,
@@ -325,14 +325,12 @@ def run(args):
                    glob_expr="*vital__*.csv",
                    col_lookup_file=col_file,
                    labels_dir=labels_dir,
-                   use_cols=use_cols,
+                   use_cols=VITAL_COLS,
                    quality=None,
                    iom=iom)
 
     if True:
         print_subtitle("Raw sensor data (no quality filtering)")
-        use_cols = [ "timestamp", "AX", "AY", "AZ",
-                     "DeMortonLabel", "DeMortonDay", "DeMorton" ]
         iom = IOManager(out_dir=out_dir,
                         info_patterns=info_patterns,
                         info_transformers=info_transformers,
@@ -346,7 +344,7 @@ def run(args):
                    glob_expr="*vital_raw__*.csv",
                    col_lookup_file=col_file,
                    labels_dir=labels_dir,
-                   use_cols=use_cols,
+                   use_cols=RAW_COLS,
                    quality=None,
                    iom=iom)
 
