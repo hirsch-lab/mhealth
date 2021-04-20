@@ -1,4 +1,4 @@
-## iMove data preprocessing
+# iMove data preprocessing
 
 To trigger the complete preprocessing: 
 
@@ -30,7 +30,7 @@ IMOVE_DATA="$DATA_ROOT/wearables/studies/usb-imove"
 
 
 
-### 1. De Morton exercises
+## 1. De Morton exercises
 
 ```bash
 python "preprocess_exercises.py" \
@@ -57,7 +57,7 @@ python "preprocess_exercises.py" \
 
 
 
-### 2. Sensor data
+## 2. Sensor data
 
 ```bash
 python "preprocess_everion.py" \
@@ -123,12 +123,13 @@ I decided to go with (1), assuming that the data in the correct format is correc
     - IRcurr → IRCurr
     - ADCoffs → ADCoeffs
 - See the file [everion_columns.csv](https://github.com/hirsch-lab/mhealth/blob/feature/imove_processing/studies/imove/preprocessing/everion_columns.csv), it determines the columns of the resulting DataFrames, alongside with the dtypes for those columns.
+- Unfortunately, the timestamps are not monotonically increasing. See for example patient 003, vital/left, at date 2018-08-14 02:00:27+00:00. 
 - Finally, the information about the the De Morton exercise session (c.f. preprocessing step 1) are also merged into the tables (both raw and vital). This adds three columns: 
     - DeMorton: boolean indicating if a De Morton exercise is currently executed
     - DeMortonLabel: str identifying the De Morton exercise, or None
     - DeMortonDay: int identifying the De Morton session, or None
 
-### 3. De Morton data extraction
+## 3. De Morton data extraction
 
 ```bash
 python "extract_demorton_data.py" \
