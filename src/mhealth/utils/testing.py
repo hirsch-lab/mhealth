@@ -139,6 +139,23 @@ class TestCase(unittest.TestCase):
         # Overrides the corresponding method of unittest.TestCase.
         np.testing.assert_almost_equal(x, y, decimal=places)
 
+    def assertNestedEqual(self, x, y, **kwargs):
+        """
+        Works only for simply nested loops (list of lists, ...)
+        """
+        if len(x) != len(y):
+            msg = "x and y do not match in length: len(x)=%d, len(y)=%d"
+            raise AssertionError(msg % (len(x), len(y)))
+        for i, (u, v) in enumerate(zip(x, y)):
+            with self.subTest(msg="Elements don't match", i=i):
+                if isinstance(u, pd.DataFrame) or isinstance(v, pd.DataFrame):
+                    self.assertFrameEqual(u, v, **kwargs)
+                elif (isinstance(u, (np.ndarray, pd.Series)) or
+                      isinstance(v, (np.ndarray, pd.Series))):
+                    self.assertArrayEqual(u, v)
+                else:
+                    self.assertEqual(u, v)
+
     def assertFrameEqual(self, x, y, **kwargs):
         pd.testing.assert_frame_equal(x, y, **kwargs)
 
