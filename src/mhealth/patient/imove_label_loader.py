@@ -92,7 +92,7 @@ def add_label(label_row, df):
         mask[imin:imax] = True
     else:
         # Fall-back: classic approach
-        mask2 = ((timestamp >= start) & (timestamp <= end))
+        mask = ((timestamp >= start) & (timestamp <= end))
     # FIXME: Most of the time (50-80%) is spent in the following lines.
     df.loc[mask, "DeMorton"] = True
     if "Task" in label_row or True:
