@@ -37,14 +37,14 @@ class GenderVisualizerTest(unittest.TestCase):
         files = glob.glob(os.path.join(os.path.join(out_dir, '**'), '*.png'), recursive=True)
         self.assertEqual(1, len(files))
 
-    @unittest.SkipTest
+    #@unittest.SkipTest
     def test_plot_age_mixed_vital_raw(self):
-        in_dir = ''
-        extra_data_dir_name = ''
+        in_dir = '/Users/reys/Desktop/ACLS_Master/MasterThesis/DataMining_covid/UKBB/data_short_header_quality_filtered_50/'
+        extra_data_dir_name = '/Users/reys/Desktop/ACLS_Master/MasterThesis/DataMining_covid/UKBB/'
 
-        out_dir = FileHelper.get_out_dir(in_dir, '_gender_plot2')
+        out_dir = FileHelper.get_out_dir(in_dir, '_gender_LOESS')
         plotter = GenderAgeVisualizer()
-        lookup_table = PatientDataLoader.load_extra_patient_data(os.path.join(extra_data_dir_name, '.csv'))
+        lookup_table = PatientDataLoader.load_extra_patient_data(os.path.join(extra_data_dir_name, 'vitals_ukbb.csv'))
 
         plotter.plot_data(in_dir, out_dir, 0, 3, lookup_table, EverionKeys.major_mixed_vital_raw,
                           EverionKeys.short_names_mixed_vital_raw)

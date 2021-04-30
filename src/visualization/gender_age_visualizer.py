@@ -32,18 +32,23 @@ class GenderAgeVisualizer:
         males = df[df['Gender'] == 'male'].sort_values(by=['Age'])
         females = df[df['Gender'] == 'female'].sort_values(by=['Age'])
 
-        window_size=3
-        appendix = '_ma'
-        for i, col in enumerate(df.columns[:-3]):
-            males[col + appendix] = males[col].rolling(window=window_size).mean()
-            females[col + appendix] = females[col].rolling(window=window_size).mean()
+        print(df)
+        x = df['Age']
 
-        fig, ax = plt.subplots(5, 1, sharex=True, sharey=False, figsize=(20, 10))
+        # window_size=3
+        # appendix = '_ma'
+        # for i, col in enumerate(df.columns[:-3]):
+        #     males[col + appendix] = males[col].rolling(window=window_size).mean()
+        #     females[col + appendix] = females[col].rolling(window=window_size).mean()
+
+        fig, ax = plt.subplots(5, 1, sharex=True, sharey=False, figsize=(12, 10))
 
         for i, col in enumerate(df.columns[:-3]):
-            sns.scatterplot(x="Age", y=col, ax=ax[i], data= df, hue = 'Gender')
-            sns.lineplot(ax=ax[i], data=males, x='Age', y=col + appendix)
-            sns.lineplot(ax=ax[i], data=females, x='Age', y=col + appendix)
+            y = df[col]
+            sns.scatterplot(x="Age", y=col, ax=ax[i], data=df)#, hue='Gender')
+            # sns.lineplot(ax=ax[i], data=males, x='Age', y=col, ci=None)# + appendix)
+            # sns.lineplot(ax=ax[i], data=females, x='Age', y=col, ci=None)# + appendix)
+            self.plotLOWESS(x, y, ax=ax[i], frac=0.5, color="red", linestyle=":", linewidth=3)
 
         fig.suptitle('Signal means across ages')
         fig.tight_layout()
@@ -52,7 +57,7 @@ class GenderAgeVisualizer:
         if not os.path.exists(out_dir):
             os.mkdir(out_dir)
 
-        fig.savefig(os.path.join(out_dir, 'Age_means.png'), bbox_inches='tight')
+        fig.savefig(os.path.join(out_dir, 'Age_means_LOESS3.png'), bbox_inches='tight')
         plt.clf()
         plt.close(fig)
 
@@ -79,4 +84,20 @@ class GenderAgeVisualizer:
             combined_df = combined_df.append(df_row)
 
         self.plot_age_means(combined_df, out_dir)
+
+    def plotLOWESS(self, x, y, ax = None, frac=0.5, **kwargs):
+        """
+        Plot local regression curve. x and y must be vectors of same length. frac
+        determines the size of the local neighborhood as a fraction of the sample
+        size. The **kwargs are forwarded to the plt.plot()
+        https://en.wikipedia.org/wiki/Local_regression
+        Usage: plotLOWESS(x, y, frac=0.3, color="red", linestyle=":", linewidth=3)
+        """
+        if ax is None:
+            ax = plt.gca()
+        kwargs = dict(kwargs)  # copy
+        import statsmodels.api as sm
+        lowess = sm.nonparametric.lowess
+        xL, yL = lowess(endog=y, exog=x, return_sorted=True, frac=frac).T
+        return ax.plot(xL, yL, **kwargs)
 
