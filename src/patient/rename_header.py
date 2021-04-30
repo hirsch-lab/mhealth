@@ -1,4 +1,5 @@
 import os
+import re
 import glob
 import pandas as pd
 from pathlib import Path
@@ -41,16 +42,18 @@ class RenameHeader:
         df.to_csv(Path(out_dir, 'Renamed_Header_' + patient_id + '.csv'))
 
 
-
-    def change_header(self, dir_name, start_idx, end_idx):
-        header_dir = Path(dir_name).name + '_header'
+    def change_header(self, dir_name):
+        header_dir = Path(dir_name).name + '_header2'
         out_dir = os.path.join(os.path.join(dir_name, os.pardir), header_dir)
         if not os.path.exists(out_dir):
             os.mkdir(out_dir)
 
         for filename in glob.glob(dir_name + '*.csv'):
             df = pd.DataFrame(pd.read_csv(filename, sep=';'))
-            patient_id = filename[start_idx:end_idx]
+            ret = re.match(".*([0-9]{3}).*", filename)
+            patient_id = ret.group(1)
+            print(patient_id)
+            #patient_id = filename[start_idx:end_idx]
 
             # patient_dir_name = os.path.join(out_dir, patient_id)
             # if not os.path.exists(patient_dir_name):

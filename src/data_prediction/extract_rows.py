@@ -10,8 +10,8 @@ class DataSelection:
 
     loader = PatientDataLoader()
 
-    def extract_rows(self, df, patient_id, out_dir_name, end_sel):
-        df_row = df[:end_sel]
+    def extract_rows(self, df, patient_id, out_dir_name, end_del):
+        df_row = df[:end_del]
 
         df_row.to_csv(Path(out_dir_name, 'Data_Selected_' + patient_id + '.csv'))
 
