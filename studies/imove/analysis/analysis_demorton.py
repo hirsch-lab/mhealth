@@ -250,9 +250,9 @@ def plot_data_availability(df, df_ex, column, label,
                                  **kwargs)
             ax.add_patch(rect)
 
-    def plot_total_patch(ax, t, x, offset, width, **kwargs):
-        rect = plt.Rectangle(xy=(t.min(), x+offset-width/2),
-                             width=t.max()-t.min(),
+    def plot_total_patch(ax, t0, t1, x, offset, width, **kwargs):
+        rect = plt.Rectangle(xy=(t0, x+offset-width/2),
+                             width=t1-t0,
                              height=width,
                              **kwargs)
         ax.add_patch(rect)
@@ -271,59 +271,71 @@ def plot_data_availability(df, df_ex, column, label,
 
     def plot_bracket(ax, x, offset, offsets, width, height, **kwargs):
         n_days = 3
-        assert len(offsets) == n_days
         rect = plt.Rectangle(xy=(-height-height/4, x-offset-width/2),
                              width=height,
                              height=n_days*width+2*(offset-width),
                              **kwargs)
         ax.add_patch(rect)
-        for i in range(n_days):
+        for day in range(1, n_days+1):
             plt.annotate(xy=(-2*height,
-                             x-offsets[i]),
-                         text="%s" % (i+1),
+                             x+offsets[day]),
+                         text="%d" % day,
                          horizontalalignment="right",
                          verticalalignment="center_baseline",
                          fontproperties=dict(size=6))
 
+
     # Only consider valid exercises from 1-15.
     df = df[~df["DeMortonLabel"].isin(["temp", "default"])].copy()
+    df_ex = df_ex[~df_ex.index.get_level_values("Task").isin(["temp", "default"])].copy()
 
     fig, ax = plt.subplots()
     print(df.head())
     print(df_ex.head())
     grouping = df.groupby(["Patient", "Side"])
     offset = 0.2
-    offsets = [-offset, 0, offset]
+    offsets = {1:offset, 2:0, 3:-offset}    # map: day->offset
     width = 0.15
     tol = 1
     yticks = {}
     for i, ((pat_id, side), dfg) in enumerate((grouping)):
         x = len(grouping)-i
         yticks[x] = f"{pat_id}/{side[0].upper()}"
-        for j, (day, dfgg) in enumerate((dfg.groupby("DeMortonDay"))):
-            day = int(day)
-            # Reference time: StartDate of exercise 1.
+        days = dfg["DeMortonDay"].dropna().unique()
+        days = sorted(map(int, days))
+        for day in days:
             ex = df_ex.loc[(pat_id, day)].copy()
-            ref_time = ex.loc["1", "StartDate"]
-            ex["Start"] = (ex["StartDate"] - ref_time).dt.total_seconds()
-            ex["Stop"] = (ex["EndDate"] - ref_time).dt.total_seconds()
-            ts = dfgg.index
-            ts = (ts - ref_time).total_seconds()
-            ts_nona = dfgg[column].dropna().index
-            ts_nona = (ts_nona - ref_time).total_seconds()
+            # Reference time: StartDate of exercise 1.
+            assert ex.loc["1", "StartDate"] == ex["StartDate"].min()
+            session_start = ex["StartDate"].min()
+            session_end = ex["EndDate"].max()
+            delta_total = (session_end - session_start).total_seconds()
+            # Time data in seconds since session start.
+            ex["Start"] = (ex["StartDate"] - session_start).dt.total_seconds()
+            ex["Stop"] = (ex["EndDate"] - session_start).dt.total_seconds()
+            # Extract sensor data.
+            mask = (dfg.index >= session_start) & (dfg.index <= session_end)
+            df_day = dfg[mask]
+            ts = df_day.index
+            ts = (ts - session_start).total_seconds()
+            ts_nona = df_day[column].dropna().index
+            ts_nona = (ts_nona - session_start).total_seconds()
             indices = split_contiguous(arr=ts_nona, tol=tol, indices=True)
-            plot_total_patch(ax=ax, t=ts, x=x, width=width, offset=offsets[j],
+            plot_total_patch(ax=ax, t0=0, t1=delta_total, x=x,
+                             width=width, offset=offsets[day],
                              color=[0.8]*3, edgecolor=None)
             if show_ex:
+                # linewidth == 0 will create a small border (only in pdf..)
                 plot_exercises(ax=ax, df_ex=ex, x=x, width=width,
-                               offset=offsets[j], alpha=0.7)
+                               offset=offsets[day], alpha=0.7, edgecolor=None,
+                               linewidth=0.5)
                 plot_contiguous(ax=ax, indices=indices, t=ts_nona, x=x,
-                                offset=offsets[j], width=width,
+                                offset=offsets[day], width=width,
                                 linewidth=0.5, facecolor=(0.4,0.4,0.4,0.7),
-                                edgecolor="black", hatch="//////")
+                                edgecolor="black")
             else:
                 plot_contiguous(ax=ax, indices=indices, t=ts_nona, x=x,
-                                offset=offsets[j], width=width, edgecolor=None,
+                                offset=offsets[day], width=width, edgecolor=None,
                                 linewidth=0, color="seagreen", alpha=0.7)
         plot_bracket(ax=ax, x=x, offset=offset, offsets=offsets, width=width,
                      height=5, facecolor=[0.2]*3, edgecolor="black",
