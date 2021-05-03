@@ -10,7 +10,6 @@ import pandas as pd
 import seaborn as sns
 from pathlib import Path
 import matplotlib.pyplot as plt
-from matplotlib import patches
 
 import context
 from mhealth.utils.commons import print_title
@@ -131,6 +130,9 @@ def read_data(data_dir, out_dir, columns, resample,
 
         print("Reading data...")
         files = list(sorted(Path(data_dir).glob("*.h5")))
+        if len(files) == 0:
+            msg = "No files HDF stores found under path: %s"
+            raise RuntimeError(msg % data_dir)
         prefix = "Patient {variables.pat_id:<3}... "
         progress = create_progress_bar(label=None,
                                        size=len(files),
@@ -160,6 +162,8 @@ def read_data(data_dir, out_dir, columns, resample,
         print("Concatenating data...")
         dfs_01Hz = [df for df in dfs_01Hz if df is not None]
         dfs_50Hz = [df for df in dfs_50Hz if df is not None]
+        df_01Hz = None
+        df_50Hz = None
         if dfs_01Hz:
             df_01Hz = pd.concat(dfs_01Hz, axis=0)
         if dfs_50Hz:
@@ -206,7 +210,7 @@ def read_data(data_dir, out_dir, columns, resample,
                                              cols_01Hz=cols_01Hz,
                                              cols_50Hz=cols_50Hz)
     if df_vital is None or df_raw is None:
-        df_vital, df_raw = _read_data_stores(data_dir=data_dir,
+        df_vital, df_raw = _read_data_stores(data_dir=data_dir/"store",
                                              cols_01Hz=cols_01Hz,
                                              cols_50Hz=cols_50Hz,
                                              resample=resample,
@@ -216,37 +220,77 @@ def read_data(data_dir, out_dir, columns, resample,
                    df_vital=df_vital,
                    df_raw=df_raw)
 
-    return df_vital, df_raw
+    df_ex = pd.read_csv(data_dir/"exercises.csv")
+    df_ex["Patient"] = df_ex["Patient"].map("{:03d}".format)
+    df_ex["StartDate"] = pd.to_datetime(df_ex["StartDate"], utc=True)
+    df_ex["EndDate"] = pd.to_datetime(df_ex["EndDate"], utc=True)
+    df_ex["Duration"] = pd.to_timedelta(df_ex["Duration"])
+    df_ex = df_ex.set_index(["Patient", "Day", "Task"])
+
+    return df_vital, df_raw, df_ex
 
 
 ###############################################################################
 
-def plot_data_availability(df, column, label):
-    def plot_total_patch(ax, t, x, offset, width, **kwargs):
-        rect = patches.Rectangle(xy=(t.min(), x+offset-width/2),
-                                 width=t.max()-t.min(),
-                                 height=width,
+def plot_data_availability(df, df_ex, column, label,
+                           show_ex=True, out_dir=None):
+    def plot_exercises(ax, df_ex, x, offset, width, **kwargs):
+        colors = sns.color_palette("hls", 20)
+        order = ["1", "2a", "2b", "2c", "2d", "3a", "3b", "4", "5a", "5b",
+                 "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
+
+        for o, c in zip(order, colors):
+            if o not in df_ex.index:
+                continue
+            start = df_ex.loc[o, "Start"]
+            stop = df_ex.loc[o, "Stop"]
+            rect = plt.Rectangle(xy=(start, x+offset-width/2),
+                                 width=stop-start,
+                                 height=width, color=c,
                                  **kwargs)
+            ax.add_patch(rect)
+
+    def plot_total_patch(ax, t, x, offset, width, **kwargs):
+        rect = plt.Rectangle(xy=(t.min(), x+offset-width/2),
+                             width=t.max()-t.min(),
+                             height=width,
+                             **kwargs)
         ax.add_patch(rect)
 
     def plot_contiguous(ax, indices, t, x, offset, width, **kwargs):
         for i, j in indices:
             t0, t1 = t[i], t[j-1]
-            rect = patches.Rectangle(xy=(t0, x+offset-width/2),
-                                     width=t1-t0,
-                                     height=width,
-                                     **kwargs)
+            if t0 > t1:
+                print(f"WARNING: found non-monotonic step: t0={t0}, t1={t1}")
+                continue
+            rect = plt.Rectangle(xy=(t0, x+offset-width/2),
+                                 width=t1-t0,
+                                 height=width/2,
+                                 **kwargs)
             ax.add_patch(rect)
 
-    def plot_bracket(ax, x, offset, width, height, **kwargs):
-        rect = patches.Rectangle(xy=(-height-height/4, x-offset-width/2),
-                                 width=height,
-                                 height=3*width+2*(offset-width),
-                                 **kwargs)
+    def plot_bracket(ax, x, offset, offsets, width, height, **kwargs):
+        n_days = 3
+        assert len(offsets) == n_days
+        rect = plt.Rectangle(xy=(-height-height/4, x-offset-width/2),
+                             width=height,
+                             height=n_days*width+2*(offset-width),
+                             **kwargs)
         ax.add_patch(rect)
+        for i in range(n_days):
+            plt.annotate(xy=(-2*height,
+                             x-offsets[i]),
+                         text="%s" % (i+1),
+                         horizontalalignment="right",
+                         verticalalignment="center_baseline",
+                         fontproperties=dict(size=6))
+
+    # Only consider valid exercises from 1-15.
+    df = df[~df["DeMortonLabel"].isin(["temp", "default"])].copy()
 
     fig, ax = plt.subplots()
     print(df.head())
+    print(df_ex.head())
     grouping = df.groupby(["Patient", "Side"])
     offset = 0.2
     offsets = [-offset, 0, offset]
@@ -257,19 +301,31 @@ def plot_data_availability(df, column, label):
         x = len(grouping)-i
         yticks[x] = f"{pat_id}/{side[0].upper()}"
         for j, (day, dfgg) in enumerate((dfg.groupby("DeMortonDay"))):
+            day = int(day)
+            # Reference time: StartDate of exercise 1.
+            ex = df_ex.loc[(pat_id, day)].copy()
+            ref_time = ex.loc["1", "StartDate"]
+            ex["Start"] = (ex["StartDate"] - ref_time).dt.total_seconds()
+            ex["Stop"] = (ex["EndDate"] - ref_time).dt.total_seconds()
             ts = dfgg.index
-            print(ts.min(), ts.max())
-            tshift = ts.min()
-            ts = (ts - tshift).total_seconds()
+            ts = (ts - ref_time).total_seconds()
+            ts_nona = dfgg[column].dropna().index
+            ts_nona = (ts_nona - ref_time).total_seconds()
+            indices = split_contiguous(arr=ts_nona, tol=tol, indices=True)
             plot_total_patch(ax=ax, t=ts, x=x, width=width, offset=offsets[j],
                              color=[0.8]*3, edgecolor=None)
-            ts_nona = dfgg[column].dropna().index
-            ts_nona = (ts_nona - tshift).total_seconds()
-            indices = split_contiguous(arr=ts_nona, tol=tol, indices=True)
-            plot_contiguous(ax=ax, indices=indices, t=ts_nona, x=x,
-                            offset=offsets[j], width=width, edgecolor=None,
-                            linewidth=0, color="seagreen", alpha=0.7)
-        plot_bracket(ax=ax, x=x, offset=offset, width=width,
+            if show_ex:
+                plot_exercises(ax=ax, df_ex=ex, x=x, width=width,
+                               offset=offsets[j], alpha=0.7)
+                plot_contiguous(ax=ax, indices=indices, t=ts_nona, x=x,
+                                offset=offsets[j], width=width,
+                                linewidth=0.5, facecolor=(0.4,0.4,0.4,0.7),
+                                edgecolor="black", hatch="//////")
+            else:
+                plot_contiguous(ax=ax, indices=indices, t=ts_nona, x=x,
+                                offset=offsets[j], width=width, edgecolor=None,
+                                linewidth=0, color="seagreen", alpha=0.7)
+        plot_bracket(ax=ax, x=x, offset=offset, offsets=offsets, width=width,
                      height=5, facecolor=[0.2]*3, edgecolor="black",
                      linewidth=1)
     ax.set_yticks(list(yticks.keys()))
@@ -284,12 +340,14 @@ def plot_data_availability(df, column, label):
     ax.set_xlabel("Time [s]")
     ax.set_title("Data availability: %s" % label)
     plt.tight_layout()
+    if out_dir:
+        save_figure(out_dir/"data_availability.pdf", fig=fig,
+                    override=False)
     plt.show()
 
 ###############################################################################
 
 def visualize_per_exercise(df, column, exercises=None):
-    print(df.shape)
     if exercises:
         mask = df["DeMortonLabel"].isin(exercises)
     else:
@@ -333,14 +391,15 @@ def run(args):
     print()
     setup_plotting()
 
-    df_vital, df_raw = read_data(data_dir=data_dir,
-                                 out_dir=out_dir,
-                                 columns=metrics,
-                                 resample=args.resample,
-                                 side=args.side,
-                                 forced=forced)
-    plot_data_availability(df=df_raw, column="A",
-                           label="acceleration (magnitude)")
+    df_vital, df_raw, df_ex = read_data(data_dir=data_dir,
+                                        out_dir=out_dir,
+                                        columns=metrics,
+                                        resample=args.resample,
+                                        side=args.side,
+                                        forced=forced)
+    plot_data_availability(df=df_raw, df_ex=df_ex, column="A",
+                           label="acceleration (magnitude)",
+                           out_dir=out_dir)
     # visualize_per_exercise(df=df_raw,
     #                        column="A",
     #                        exercises=["2a", "2b"])
