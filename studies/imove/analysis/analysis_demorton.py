@@ -10,6 +10,7 @@ import pandas as pd
 import seaborn as sns
 from pathlib import Path
 import matplotlib.pyplot as plt
+from matplotlib.legend_handler import HandlerTuple
 
 import context
 from mhealth.utils.commons import print_title
@@ -238,6 +239,7 @@ def plot_data_availability(df, df_ex, column, label,
         colors = sns.color_palette("hls", 20)
         order = ["1", "2a", "2b", "2c", "2d", "3a", "3b", "4", "5a", "5b",
                  "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
+        patches = []
 
         for o, c in zip(order, colors):
             if o not in df_ex.index:
@@ -249,15 +251,20 @@ def plot_data_availability(df, df_ex, column, label,
                                  height=width, color=c,
                                  **kwargs)
             ax.add_patch(rect)
+            patches.append(rect)
+        return patches
 
     def plot_total_patch(ax, t0, t1, x, offset, width, **kwargs):
         rect = plt.Rectangle(xy=(t0, x+offset-width/2),
                              width=t1-t0,
                              height=width,
+                             label="Total",
                              **kwargs)
         ax.add_patch(rect)
+        return rect
 
     def plot_contiguous(ax, indices, t, x, offset, width, **kwargs):
+        patches = []
         for i, j in indices:
             t0, t1 = t[i], t[j-1]
             if t0 > t1:
@@ -265,9 +272,11 @@ def plot_data_availability(df, df_ex, column, label,
                 continue
             rect = plt.Rectangle(xy=(t0, x+offset-width/2),
                                  width=t1-t0,
-                                 height=width/2,
+                                 height=width,
                                  **kwargs)
             ax.add_patch(rect)
+            patches.append(rect)
+        return patches
 
     def plot_bracket(ax, x, offset, offsets, width, height, **kwargs):
         n_days = 3
@@ -286,18 +295,18 @@ def plot_data_availability(df, df_ex, column, label,
 
 
     # Only consider valid exercises from 1-15.
+    tasks = df_ex.index.get_level_values("Task")
     df = df[~df["DeMortonLabel"].isin(["temp", "default"])].copy()
-    df_ex = df_ex[~df_ex.index.get_level_values("Task").isin(["temp", "default"])].copy()
+    df_ex = df_ex[~tasks.isin(["temp", "default"])].copy()
 
-    fig, ax = plt.subplots()
-    print(df.head())
-    print(df_ex.head())
     grouping = df.groupby(["Patient", "Side"])
     offset = 0.2
     offsets = {1:offset, 2:0, 3:-offset}    # map: day->offset
     width = 0.15
     tol = 1
     yticks = {}
+    fig, ax = plt.subplots(figsize=(6.4, 4.8/8*len(grouping)))
+    legend_items = {}
     for i, ((pat_id, side), dfg) in enumerate((grouping)):
         x = len(grouping)-i
         yticks[x] = f"{pat_id}/{side[0].upper()}"
@@ -321,22 +330,34 @@ def plot_data_availability(df, df_ex, column, label,
             ts_nona = df_day[column].dropna().index
             ts_nona = (ts_nona - session_start).total_seconds()
             indices = split_contiguous(arr=ts_nona, tol=tol, indices=True)
-            plot_total_patch(ax=ax, t0=0, t1=delta_total, x=x,
-                             width=width, offset=offsets[day],
-                             color=[0.8]*3, edgecolor=None)
+            h_total = plot_total_patch(ax=ax, t0=0, t1=delta_total, x=x,
+                                       width=width, offset=offsets[day],
+                                       color=[0.8]*3, edgecolor=None)
             if show_ex:
-                # linewidth == 0 will create a small border (only in pdf..)
-                plot_exercises(ax=ax, df_ex=ex, x=x, width=width,
-                               offset=offsets[day], alpha=0.7, edgecolor=None,
-                               linewidth=0.5)
-                plot_contiguous(ax=ax, indices=indices, t=ts_nona, x=x,
-                                offset=offsets[day], width=width,
-                                linewidth=0.5, facecolor=(0.4,0.4,0.4,0.7),
-                                edgecolor="black")
+                # linewidth == 0 creates a small border (only in pdf).
+                h_exs = plot_exercises(ax=ax, df_ex=ex, x=x, width=width,
+                                       offset=offsets[day], alpha=0.7,
+                                       edgecolor=None, linewidth=0.5)
+                h_cts = plot_contiguous(ax=ax, indices=indices, t=ts_nona, x=x,
+                                        offset=offsets[day]-width/4,
+                                        width=width/2, linewidth=0.5,
+                                        facecolor=(0.4,0.4,0.4,0.7),
+                                        edgecolor="black")
             else:
-                plot_contiguous(ax=ax, indices=indices, t=ts_nona, x=x,
-                                offset=offsets[day], width=width, edgecolor=None,
-                                linewidth=0, color="seagreen", alpha=0.7)
+                h_cts = plot_contiguous(ax=ax, indices=indices, t=ts_nona, x=x,
+                                        offset=offsets[day], width=width,
+                                        edgecolor=None, linewidth=0,
+                                        color="seagreen", alpha=0.7)
+
+            # Collect legend entries:
+            if h_total:
+                legend_items.setdefault("Complete session", h_total)
+            if h_exs:
+                legend_items.setdefault("Exercises", tuple(h_exs))
+            if h_cts:
+                colors = sns.color_palette("hls", 20)
+                legend_items.setdefault("Data available", h_cts[0])
+
         plot_bracket(ax=ax, x=x, offset=offset, offsets=offsets, width=width,
                      height=5, facecolor=[0.2]*3, edgecolor="black",
                      linewidth=1)
@@ -352,10 +373,13 @@ def plot_data_availability(df, df_ex, column, label,
     ax.set_xlabel("Time [s]")
     ax.set_title("Data availability: %s" % label)
     plt.tight_layout()
+
+    plt.legend(legend_items.values(), legend_items.keys(),
+               handler_map={tuple: HandlerTuple(ndivide=None, pad=0)},
+               bbox_to_anchor=(1.04,1), loc="upper left")
     if out_dir:
         save_figure(out_dir/"data_availability.pdf", fig=fig,
                     override=False)
-    plt.show()
 
 ###############################################################################
 
