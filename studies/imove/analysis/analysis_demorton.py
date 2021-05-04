@@ -4,6 +4,7 @@ Visualize the sensor data for the De Morton exercises.
 TODOs:
 - Should df_vital and df_raw be merged after resampling?
 """
+import logging
 import argparse
 import numpy as np
 import pandas as pd
@@ -13,12 +14,12 @@ import matplotlib.pyplot as plt
 from matplotlib.legend_handler import HandlerTuple
 
 import context
-from mhealth.utils.commons import print_title
 from mhealth.utils.maths import split_contiguous
 from mhealth.utils.context_info import dump_context
 from mhealth.utils.commons import create_progress_bar
 from mhealth.patient.imove_label_loader import merge_labels
 from mhealth.utils.file_helper import ensure_dir, write_hdf
+from mhealth.utils.commons import print_title, setup_logging
 from mhealth.utils.plotter_helper import save_figure, setup_plotting
 
 DEFAULT_COLUMNS = [ "HR", "AX", "AY", "AZ", "A" ]
@@ -27,11 +28,13 @@ DEFAULT_COLUMNS = [ "HR", "AX", "AY", "AZ", "A" ]
 METRICS_AT_50HZ = { "AX", "AY", "AZ", "A" }
 METRICS_AT_01HZ = { "HR" }
 
+logger = logging.getLogger("imove")
+
 
 ###############################################################################
 
 def read_data(data_dir, out_dir, columns, resample,
-              side="both", forced=False, n_pats=None):
+              side="both", forced=False, n_pats=None, pats=None):
 
     def _resample(df, resample, group):
         if group == "vital" and (resample is None or resample<=1):
@@ -97,7 +100,6 @@ def read_data(data_dir, out_dir, columns, resample,
             df = _set_timestamp_index(df=df, group=group)
             df = _derived_metrics_01Hz(df=df, group=group)
             df = _derived_metrics_50Hz(df=df, group=group)
-            print(df.head())
             df = df[cols].copy()
             # Only a bit slow (1-2s, if not a no-op)
             df = _resample(df=df, resample=resample, group=group)
@@ -125,11 +127,14 @@ def read_data(data_dir, out_dir, columns, resample,
             assert False
 
     def _read_data_stores(data_dir, cols_01Hz, cols_50Hz,
-                          resample, side, n_pats=None):
+                          resample, side, n_pats=None, pats=None):
+        """
+        n_pats is ignored if pats is not None
+        """
         dfs_01Hz = []
         dfs_50Hz = []
 
-        print("Reading data...")
+        logger.info("Reading data...")
         files = list(sorted(Path(data_dir).glob("*.h5")))
         if len(files) == 0:
             msg = "No files HDF stores found under path: %s"
@@ -142,9 +147,11 @@ def read_data(data_dir, out_dir, columns, resample,
                                        variables={"pat_id": "N/A"})
         progress.start()
         for i, path in enumerate(files):
-            if n_pats and i>=n_pats:
-                break
             pat_id = path.stem
+            if pats is not None and pat_id not in pats:
+                continue
+            elif n_pats is not None and n_pats and i>=n_pats:
+                break
             progress.update(i, pat_id=pat_id)
             store = pd.HDFStore(path, mode="r")
             if cols_01Hz:
@@ -159,9 +166,9 @@ def read_data(data_dir, out_dir, columns, resample,
                              resample=resample)
             store.close()
         progress.finish()
-        print("Done!")
+        logger.info("Done!")
 
-        print("Concatenating data...")
+        logger.info("Concatenating data...")
         dfs_01Hz = [df for df in dfs_01Hz if df is not None]
         dfs_50Hz = [df for df in dfs_50Hz if df is not None]
         df_01Hz = None
@@ -170,29 +177,39 @@ def read_data(data_dir, out_dir, columns, resample,
             df_01Hz = pd.concat(dfs_01Hz, axis=0)
         if dfs_50Hz:
             df_50Hz = pd.concat(dfs_50Hz, axis=0)
-        print("Done!")
+        logger.info("Done!")
         return df_01Hz, df_50Hz
 
-    def _read_data_lazily(out_dir, cols_01Hz, cols_50Hz, n_pats=None):
+    def _read_data_lazily(out_dir, cols_01Hz, cols_50Hz,
+                          n_pats=None, pats=None):
         filepath = out_dir / "demorton.h5"
         if not filepath.is_file():
             return None, None
-        print("Reading data lazily...")
+        logger.info("Reading data lazily...")
         store = pd.HDFStore(filepath, mode="r")
         df_vital = store["vital"]
         df_raw = store["raw"]
-        if n_pats is not None:
-            pats = df_vital["Patient"]
-            pats_unique = pats.unique()
-            choice = pats_unique[:n_pats]
+        pats_vital = df_vital["Patient"]
+        pats_unique = pats_vital.unique()  # keeps order of appearance!
+        choice = None
+        if pats is not None:
+            diff = set(pats) - set(pats_unique)
+            if len(diff)>0:
+                msg = ("WARNING: Requested patients cannot be loaded lazily.\n"
+                       "         Use flag --force-read to avoid this warning.\n"
+                       "         Missing patients: %s")
+                logger.warning(msg % ", ".join(diff))
+            choice = pats
+        elif n_pats is not None:
             if len(pats_unique) < n_pats:
-                msg = (f"WARNING: requested {n_pats} patients, but the "
-                       f"lazyily loaded data contains only data of "
-                       f"{len(pats_unique)} patients.")
-                print(msg)
-            df_vital = df_vital[pats.isin(choice)]
-            pats = df_raw["Patient"]
-            df_raw = df_raw[pats.isin(choice)]
+                msg = ("WARNING: Requested %d patients, but the lazily loaded "
+                       "data contains only data from %d patients.")
+                logger.warning(msg % (n_pats, len(pats_unique)))
+            choice = pats_unique[:n_pats]
+        if choice is not None:
+            df_vital = df_vital[pats_vital.isin(choice)]
+            pats_raw = df_raw["Patient"]
+            df_raw = df_raw[pats_raw.isin(choice)]
 
         store.close()
         if set(cols_01Hz) - set(df_vital.columns):
@@ -201,15 +218,15 @@ def read_data(data_dir, out_dir, columns, resample,
         if set(cols_50Hz) - set(df_raw.columns):
             # Force re-reading.
             df_raw = None
-        print("Done!")
+        logger.info("Done!")
         return df_vital, df_raw
 
     def _save_data(out_dir, df_vital, df_raw):
-        print("Writing data...")
+        logger.info("Writing data...")
         filepath = out_dir / "demorton.h5"
         write_hdf(df=df_vital, path=filepath, key="vital")
         write_hdf(df=df_raw, path=filepath, key="raw")
-        print("Done!")
+        logger.info("Done!")
 
 
     #######################################################
@@ -224,14 +241,16 @@ def read_data(data_dir, out_dir, columns, resample,
         df_vital, df_raw = _read_data_lazily(out_dir=out_dir,
                                              cols_01Hz=cols_01Hz,
                                              cols_50Hz=cols_50Hz,
-                                             n_pats=n_pats)
+                                             n_pats=n_pats,
+                                             pats=pats)
     if df_vital is None or df_raw is None:
         df_vital, df_raw = _read_data_stores(data_dir=data_dir/"store",
                                              cols_01Hz=cols_01Hz,
                                              cols_50Hz=cols_50Hz,
                                              resample=resample,
                                              side=side,
-                                             n_pats=n_pats)
+                                             n_pats=n_pats,
+                                             pats=pats)
         # Save for lazy loading.
         _save_data(out_dir=out_dir,
                    df_vital=df_vital,
@@ -284,7 +303,8 @@ def plot_data_availability(df, df_ex, column, label,
         for i, j in indices:
             t0, t1 = t[i], t[j-1]
             if t0 > t1:
-                print(f"WARNING: found non-monotonic step: t0={t0}, t1={t1}")
+                logger.warning(f"Found non-monotonic step: "
+                               "t0={t0:.1f}s, t1={t1:.1f}s")
                 continue
             rect = plt.Rectangle(xy=(t0, x+offset-width/2),
                                  width=t1-t0,
@@ -308,7 +328,6 @@ def plot_data_availability(df, df_ex, column, label,
                          horizontalalignment="right",
                          verticalalignment="center_baseline",
                          fontproperties=dict(size=6))
-
 
     # Only consider valid exercises from 1-15.
     tasks = df_ex.index.get_level_values("Task")
@@ -418,10 +437,6 @@ def visualize_per_exercise(df, column, exercises=None):
     df = df.set_index(group_cols)
     df["Seconds"] = t
     df = df.reset_index()
-    print(df["Side"].value_counts())
-
-    print(df.loc[df["DeMortonLabel"]=="2a"])
-
     g = sns.relplot(x="Seconds", y=column, hue="Patient",
                     style="DeMortonDay", col="DeMortonLabel",
                     data=df, kind="line", style_order=["1","2","3"],
@@ -432,16 +447,18 @@ def visualize_per_exercise(df, column, exercises=None):
 ###############################################################################
 
 def run(args):
+    setup_logging(verbosity=2, logger=logger)
     data_dir = Path(args.in_dir)
     out_dir = Path(args.out_dir)
     metrics = args.metrics
     forced = args.force_read
     n_pats = args.n_pats
+    pats = args.patients
     dump_context(out_dir=out_dir)
 
     print_title("Analyzing De Morton exercises:")
-    print("    data_dir:", data_dir)
-    print("    out_dir:", out_dir)
+    print("    data_dir: %s" % data_dir)
+    print("    out_dir: %s" % out_dir)
     print()
     setup_plotting()
 
@@ -451,7 +468,8 @@ def run(args):
                                         resample=args.resample,
                                         side=args.side,
                                         forced=forced,
-                                        n_pats=n_pats)
+                                        n_pats=n_pats,
+                                        pats=pats)
     plot_data_availability(df=df_raw, df_ex=df_ex, column="A",
                            label="acceleration (magnitude)",
                            out_dir=out_dir)
@@ -485,6 +503,8 @@ def parse_args():
     parser.add_argument("-n", "--n-pats", default=None, type=int,
                         help=("Number of patients to be loaded. Make sure to "
                               "use the --force-read command."))
+    parser.add_argument("-p", "--patients", default=None, type=str, nargs="*",
+                        help="List of patients to include (format: '%%03d')")
     parser.set_defaults(func=run)
     return parser.parse_args()
 
