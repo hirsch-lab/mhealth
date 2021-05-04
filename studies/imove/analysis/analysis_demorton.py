@@ -31,7 +31,7 @@ METRICS_AT_01HZ = { "HR" }
 ###############################################################################
 
 def read_data(data_dir, out_dir, columns, resample,
-              side="both", forced=False):
+              side="both", forced=False, n_pats=None):
 
     def _resample(df, resample, group):
         if group == "vital" and (resample is None or resample<=1):
@@ -125,7 +125,7 @@ def read_data(data_dir, out_dir, columns, resample,
             assert False
 
     def _read_data_stores(data_dir, cols_01Hz, cols_50Hz,
-                          resample, side):
+                          resample, side, n_pats=None):
         dfs_01Hz = []
         dfs_50Hz = []
 
@@ -135,13 +135,14 @@ def read_data(data_dir, out_dir, columns, resample,
             msg = "No files HDF stores found under path: %s"
             raise RuntimeError(msg % data_dir)
         prefix = "Patient {variables.pat_id:<3}... "
+        n_files = n_pats if n_pats is not None else len(files)
         progress = create_progress_bar(label=None,
-                                       size=len(files),
+                                       size=n_files,
                                        prefix=prefix,
                                        variables={"pat_id": "N/A"})
         progress.start()
         for i, path in enumerate(files):
-            if i>=4:
+            if n_pats and i>=n_pats:
                 break
             pat_id = path.stem
             progress.update(i, pat_id=pat_id)
@@ -172,7 +173,7 @@ def read_data(data_dir, out_dir, columns, resample,
         print("Done!")
         return df_01Hz, df_50Hz
 
-    def _read_data_lazily(out_dir, cols_01Hz, cols_50Hz):
+    def _read_data_lazily(out_dir, cols_01Hz, cols_50Hz, n_pats=None):
         filepath = out_dir / "demorton.h5"
         if not filepath.is_file():
             return None, None
@@ -180,6 +181,19 @@ def read_data(data_dir, out_dir, columns, resample,
         store = pd.HDFStore(filepath, mode="r")
         df_vital = store["vital"]
         df_raw = store["raw"]
+        if n_pats is not None:
+            pats = df_vital["Patient"]
+            pats_unique = pats.unique()
+            choice = pats_unique[:n_pats]
+            if len(pats_unique) < n_pats:
+                msg = (f"WARNING: requested {n_pats} patients, but the "
+                       f"lazyily loaded data contains only data of "
+                       f"{len(pats_unique)} patients.")
+                print(msg)
+            df_vital = df_vital[pats.isin(choice)]
+            pats = df_raw["Patient"]
+            df_raw = df_raw[pats.isin(choice)]
+
         store.close()
         if set(cols_01Hz) - set(df_vital.columns):
             # Force re-reading.
@@ -209,13 +223,15 @@ def read_data(data_dir, out_dir, columns, resample,
     if not forced:
         df_vital, df_raw = _read_data_lazily(out_dir=out_dir,
                                              cols_01Hz=cols_01Hz,
-                                             cols_50Hz=cols_50Hz)
+                                             cols_50Hz=cols_50Hz,
+                                             n_pats=n_pats)
     if df_vital is None or df_raw is None:
         df_vital, df_raw = _read_data_stores(data_dir=data_dir/"store",
                                              cols_01Hz=cols_01Hz,
                                              cols_50Hz=cols_50Hz,
                                              resample=resample,
-                                             side=side)
+                                             side=side,
+                                             n_pats=n_pats)
         # Save for lazy loading.
         _save_data(out_dir=out_dir,
                    df_vital=df_vital,
@@ -344,6 +360,7 @@ def plot_data_availability(df, df_ex, column, label,
                                         facecolor=(0.4,0.4,0.4,0.7),
                                         edgecolor="black")
             else:
+                h_exs = None
                 h_cts = plot_contiguous(ax=ax, indices=indices, t=ts_nona, x=x,
                                         offset=offsets[day], width=width,
                                         edgecolor=None, linewidth=0,
@@ -419,6 +436,7 @@ def run(args):
     out_dir = Path(args.out_dir)
     metrics = args.metrics
     forced = args.force_read
+    n_pats = args.n_pats
     dump_context(out_dir=out_dir)
 
     print_title("Analyzing De Morton exercises:")
@@ -432,7 +450,8 @@ def run(args):
                                         columns=metrics,
                                         resample=args.resample,
                                         side=args.side,
-                                        forced=forced)
+                                        forced=forced,
+                                        n_pats=n_pats)
     plot_data_availability(df=df_raw, df_ex=df_ex, column="A",
                            label="acceleration (magnitude)",
                            out_dir=out_dir)
@@ -463,6 +482,9 @@ def parse_args():
                         help="Select the side of the device")
     parser.add_argument("-f", "--force-read", action="store_true",
                         help="Enforce reading of data-stores")
+    parser.add_argument("-n", "--n-pats", default=None, type=int,
+                        help=("Number of patients to be loaded. Make sure to "
+                              "use the --force-read command."))
     parser.set_defaults(func=run)
     return parser.parse_args()
 
