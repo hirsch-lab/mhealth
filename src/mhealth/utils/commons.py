@@ -1,26 +1,76 @@
+import logging
 import warnings
 import progressbar as pg
-from typing import Optional
+from functools import partial
+from typing import Optional, Callable, Any
+
+PrintFunctor = Callable[[Any], Any]
+
+DEFAULT_FMT = "%(levelname)s: %(message)s"
+
+def setup_logging(verbosity: int=1,
+                  fmt: str=DEFAULT_FMT,
+                  logger: Optional[logging.Logger]=None) -> None:
+    def _set_level_strings():
+        logging.TRACE = logging.DEBUG - 1
+        logging.DRYRUN = 1000    # Custom log level.
+        logging.STATUS = 1001    # Custom log level.
+        logging.addLevelName(logging.TRACE,   "TRACE")
+        logging.addLevelName(logging.DEBUG,   "DEBUG")
+        logging.addLevelName(logging.INFO,    "INFO")
+        logging.addLevelName(logging.WARNING, "WARN")
+        logging.addLevelName(logging.ERROR,   "ERROR")
+        logging.addLevelName(logging.CRITICAL,"CRIT")
+        logging.addLevelName(logging.DRYRUN,  "DRY")
+        logging.addLevelName(logging.STATUS,  "STATUS")
+
+        logging.trace = partial(logging.log, logging.TRACE)
+        logging.dryrun = partial(logging.log, logging.DRYRUN)
+        logging.status = partial(logging.log, logging.STATUS)
+
+    _set_level_strings()
+
+    level: Optional[int] = logging.WARN
+    if verbosity >= 3:
+        level = logging.TRACE  # type: ignore
+    elif verbosity == 2:
+        level = logging.DEBUG
+    elif verbosity == 1:
+        level = logging.INFO
+    elif verbosity == 0:
+        level = logging.WARN
+    elif verbosity < 0:
+        level = None
+
+    if level is not None:
+        logger = logger if logger else logging.getLogger()
+        logger.setLevel(level)
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter(fmt=fmt))
+        logger.addHandler(handler)
+
 
 def print_title(title: str,
-                width: Optional[int]=60) -> None:
+                width: Optional[int]=60,
+                printer: PrintFunctor=print) -> None:
     if width is None:
         width = len(title)+2
-    print("")
-    print("#"*width)
-    print("# "+title)
-    print("#"*width)
-    print("")
+    printer("")
+    printer("#"*width)
+    printer("# "+title)
+    printer("#"*width)
+    printer("")
 
 
 def print_subtitle(title: str,
-                   width: Optional[int]=60) -> None:
+                   width: Optional[int]=60,
+                   printer: PrintFunctor=print) -> None:
     if width is None:
         width = len(title)+2
-    print("")
-    print(title)
-    print("#"*width)
-    print("")
+    printer("")
+    printer(title)
+    printer("#"*width)
+    printer("")
 
 
 def create_progress_bar(size: Optional[int]=None,
