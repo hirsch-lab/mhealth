@@ -34,7 +34,8 @@ logger = logging.getLogger("imove")
 ###############################################################################
 
 def read_data(data_dir, out_dir, columns, resample,
-              side="both", forced=False, n_pats=None, pats=None):
+              side="both", forced=False, n_pats=None,
+              pats=None, labels=None):
 
     def _resample(df, resample, group):
         if group == "vital" and (resample is None or resample<=1):
@@ -127,7 +128,8 @@ def read_data(data_dir, out_dir, columns, resample,
             assert False
 
     def _read_data_stores(data_dir, cols_01Hz, cols_50Hz,
-                          resample, side, n_pats=None, pats=None):
+                          resample, side, n_pats=None,
+                          pats=None, labels=None):
         """
         n_pats is ignored if pats is not None
         """
@@ -177,28 +179,75 @@ def read_data(data_dir, out_dir, columns, resample,
             df_01Hz = pd.concat(dfs_01Hz, axis=0)
         if dfs_50Hz:
             df_50Hz = pd.concat(dfs_50Hz, axis=0)
+        if labels is not None:
+            logger.info("Reading data for De Morton labels: %s",
+                        ", ".join(labels))
+            df_01Hz = df_01Hz[df_01Hz["DeMortonLabel"].isin(labels)]
+            df_50Hz = df_50Hz[df_50Hz["DeMortonLabel"].isin(labels)]
         logger.info("Done!")
         return df_01Hz, df_50Hz
 
     def _read_data_lazily(out_dir, cols_01Hz, cols_50Hz,
-                          n_pats=None, pats=None):
-        filepath = out_dir / "demorton.h5"
-        if not filepath.is_file():
-            return None, None
-        logger.info("Reading data lazily...")
-        store = pd.HDFStore(filepath, mode="r")
-        df_vital = store["vital"]
-        df_raw = store["raw"]
+                          n_pats=None, pats=None, labels=None,
+                          mode="from_exercises"):
+        """
+        Arguments:
+            mode:   Two modes are available:
+                        - "all": read store/demorton.h5
+                        - "from_exercises": read from store/ex-*.h5
+                    Note: demorton.h5 contains all data that was extracted by
+                    preprocessing/extract_demorton_data.py. It allows to select
+                    data ±margin around the exercise sessions.
+            labels: Optional list of exercises/labels to include. Is ignored
+                    if mode != "from_exercises"
+        """
+        assert mode in ("all", "from_exercises")
+        if mode == "all":
+            filepath = out_dir / "store" / "demorton.h5"
+            if not filepath.is_file():
+                return None, None
+            logger.info("Reading data lazily...")
+            store = pd.HDFStore(filepath, mode="r")
+            df_vital = store["vital"]
+            df_raw = store["raw"]
+        if mode == "from_exercises":
+            files = sorted((out_dir / "store").glob("ex*.h5"))
+            if not files:
+                return None, None
+            dfs_vital = []
+            dfs_raw = []
+            if labels is not None:
+                logger.info("Lazy loading data for De Morton labels: %s",
+                            ", ".join(labels))
+            for filepath in files:
+                label = filepath.stem
+                label = label.replace("ex-", "")
+                if labels is not None and label not in labels:
+                    continue
+                store = pd.HDFStore(filepath, mode="r")
+                dfs_vital.append(store["vital"])
+                dfs_raw.append(store["raw"])
+            df_vital = pd.concat(dfs_vital, axis=0)
+            df_raw = pd.concat(dfs_raw, axis=0)
+
         pats_vital = df_vital["Patient"]
         pats_unique = pats_vital.unique()  # keeps order of appearance!
         choice = None
         if pats is not None:
             diff = set(pats) - set(pats_unique)
-            if len(diff)>0:
-                msg = ("WARNING: Requested patients cannot be loaded lazily.\n"
-                       "         Use flag --force-read to avoid this warning.\n"
-                       "         Missing patients: %s")
+            if len(diff)>0 and labels is None:
+                msg = ("Requested patients cannot be loaded lazily.\n"
+                       "      Use flag --force-read to avoid this warning.\n"
+                       "      Missing patients: %s")
                 logger.warning(msg % ", ".join(diff))
+            elif len(diff)>0 :
+                msg = ("Requested patients cannot be loaded lazily. "
+                       "Try flag --force-read to avoid this warning.\n"
+                       "      Note: It could be that no data is "
+                       "available for the selected labels.\n"
+                       "      Missing patients: %s\n"
+                       "      Selected labels:  %s")
+                logger.warning(msg, ", ".join(diff), ", ".join(labels))
             choice = pats
         elif n_pats is not None:
             if len(pats_unique) < n_pats:
@@ -221,9 +270,18 @@ def read_data(data_dir, out_dir, columns, resample,
         logger.info("Done!")
         return df_vital, df_raw
 
-    def _save_data(out_dir, df_vital, df_raw):
+    def _save_data(out_dir, df_vital, df_raw, split_exercises=True):
         logger.info("Writing data...")
-        filepath = out_dir / "demorton.h5"
+        if split_exercises:
+            # This drops all data for which no De Morton label is set.
+            for label, dfv in df_vital.groupby("DeMortonLabel"):
+                filepath = out_dir / "store" / f"ex-{label}.h5"
+                write_hdf(df=dfv, path=filepath, key="vital")
+            for label, dfr in df_raw.groupby("DeMortonLabel"):
+                filepath = out_dir / "store" / f"ex-{label}.h5"
+                write_hdf(df=dfr, path=filepath, key="raw")
+        # This stores all data!
+        filepath = out_dir / "store" / "demorton.h5"
         write_hdf(df=df_vital, path=filepath, key="vital")
         write_hdf(df=df_raw, path=filepath, key="raw")
         logger.info("Done!")
@@ -238,11 +296,14 @@ def read_data(data_dir, out_dir, columns, resample,
 
     df_vital = df_raw = None
     if not forced:
+        lazy_mode = "from_exercises" if labels else "all"
         df_vital, df_raw = _read_data_lazily(out_dir=out_dir,
                                              cols_01Hz=cols_01Hz,
                                              cols_50Hz=cols_50Hz,
                                              n_pats=n_pats,
-                                             pats=pats)
+                                             pats=pats,
+                                             labels=labels,
+                                             mode=lazy_mode)
     if df_vital is None or df_raw is None:
         df_vital, df_raw = _read_data_stores(data_dir=data_dir/"store",
                                              cols_01Hz=cols_01Hz,
@@ -250,7 +311,8 @@ def read_data(data_dir, out_dir, columns, resample,
                                              resample=resample,
                                              side=side,
                                              n_pats=n_pats,
-                                             pats=pats)
+                                             pats=pats,
+                                             labels=labels)
         # Save for lazy loading.
         _save_data(out_dir=out_dir,
                    df_vital=df_vital,
@@ -268,7 +330,7 @@ def read_data(data_dir, out_dir, columns, resample,
 
 ###############################################################################
 
-def plot_data_availability(df, df_ex, column, label,
+def plot_data_availability(df, df_ex, column, title, labels,
                            show_ex=True, out_dir=None):
     def plot_exercises(ax, df_ex, x, offset, width, **kwargs):
         colors = sns.color_palette("hls", 20)
@@ -407,7 +469,11 @@ def plot_data_availability(df, df_ex, column, label,
     ax.spines["right"].set_visible(False)
     ax.spines["top"].set_visible(False)
     ax.set_xlabel("Time [s]")
-    ax.set_title("Data availability: %s" % label)
+    title = "Data availability: %s" % title
+    if labels:
+        title += ("\n*** Sensor data only for labels: %s ***"
+                  % ", ".join(labels))
+    ax.set_title(title)
     plt.tight_layout()
 
     plt.legend(legend_items.values(), legend_items.keys(),
@@ -454,6 +520,7 @@ def run(args):
     forced = args.force_read
     n_pats = args.n_pats
     pats = args.patients
+    labels = args.labels
     dump_context(out_dir=out_dir)
 
     print_title("Analyzing De Morton exercises:")
@@ -469,10 +536,11 @@ def run(args):
                                         side=args.side,
                                         forced=forced,
                                         n_pats=n_pats,
-                                        pats=pats)
+                                        pats=pats,
+                                        labels=labels)
     plot_data_availability(df=df_raw, df_ex=df_ex, column="A",
-                           label="acceleration (magnitude)",
-                           out_dir=out_dir)
+                           title="Acceleration (magnitude)",
+                           labels=labels, out_dir=out_dir)
     # visualize_per_exercise(df=df_raw,
     #                        column="A",
     #                        exercises=["2a", "2b"])
@@ -505,6 +573,8 @@ def parse_args():
                               "use the --force-read command."))
     parser.add_argument("-p", "--patients", default=None, type=str, nargs="*",
                         help="List of patients to include (format: '%%03d')")
+    parser.add_argument("-l", "--labels", default=None, type=str, nargs="*",
+                        help="List of De Morton labels to include")
     parser.set_defaults(func=run)
     return parser.parse_args()
 
