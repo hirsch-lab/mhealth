@@ -365,8 +365,8 @@ def plot_data_availability(df, df_ex, column, title, labels,
         for i, j in indices:
             t0, t1 = t[i], t[j-1]
             if t0 > t1:
-                logger.warning(f"Found non-monotonic step: "
-                               "t0={t0:.1f}s, t1={t1:.1f}s")
+                logger.warning("Found non-monotonic step: "
+                               f"t0={t0:.1f}s, t1={t1:.1f}s")
                 continue
             rect = plt.Rectangle(xy=(t0, x+offset-width/2),
                                  width=t1-t0,
@@ -460,11 +460,11 @@ def plot_data_availability(df, df_ex, column, title, labels,
                      height=5, facecolor=[0.2]*3, edgecolor="black",
                      linewidth=1)
     ax.set_yticks(list(yticks.keys()))
-    ax.set_yticklabels(list(yticks.values()))
+    ax.set_yticklabels(list(yticks.values()), horizontalalignment="left")
     plt.autoscale(enable=True)
     ax.tick_params(top=False, bottom=True, left=False, right=False,
                    labelleft=True, labelbottom=True)
-    ax.tick_params(axis="y", pad=-10)
+    ax.tick_params(axis="y", pad=20)
     ax.spines["left"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.spines["top"].set_visible(False)
@@ -480,7 +480,8 @@ def plot_data_availability(df, df_ex, column, title, labels,
                handler_map={tuple: HandlerTuple(ndivide=None, pad=0)},
                bbox_to_anchor=(1.04,1), loc="upper left")
     if out_dir:
-        save_figure(out_dir/"data_availability.pdf", fig=fig,
+        suffix = "_ex.pdf" if show_ex else ".pdf"
+        save_figure(out_dir/("data_availability"+suffix), fig=fig,
                     override=False)
 
 ###############################################################################
@@ -541,6 +542,11 @@ def run(args):
     plot_data_availability(df=df_raw, df_ex=df_ex, column="A",
                            title="Acceleration (magnitude)",
                            labels=labels, out_dir=out_dir)
+    plot_data_availability(df=df_raw, df_ex=df_ex, column="A",
+                           title="Acceleration (magnitude)",
+                           labels=labels, out_dir=out_dir,
+                           show_ex=False)
+
     # visualize_per_exercise(df=df_raw,
     #                        column="A",
     #                        exercises=["2a", "2b"])
