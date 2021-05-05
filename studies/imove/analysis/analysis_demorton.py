@@ -42,10 +42,12 @@ def read_data(data_dir, out_dir, columns, resample,
             return df
         if group == "raw" and (resample is None or resample<=(1/50)):
             return df
-        msg = "Currently, only integral values for integral are possible."
-        assert resample==int(resample), msg
         if resample and resample>0:
-            df = df.resample("%ds" % resample).mean()
+            if resample < 1:
+                offset = "%dms" % int(1000*resample)
+            else:
+                offset = "%ds" % resample
+            df = df.resample(offset).mean()
         return df
 
     def _derived_metrics_01Hz(df, group):
@@ -210,6 +212,7 @@ def read_data(data_dir, out_dir, columns, resample,
             store = pd.HDFStore(filepath, mode="r")
             df_vital = store["vital"]
             df_raw = store["raw"]
+            store.close()
         if mode == "from_exercises":
             files = sorted((out_dir / "store").glob("ex*.h5"))
             if not files:
@@ -483,38 +486,151 @@ def plot_data_availability(df, df_ex, column, title, labels,
         suffix = "_ex.pdf" if show_ex else ".pdf"
         save_figure(out_dir/("data_availability"+suffix), fig=fig,
                     override=False)
+    plt.close(fig)
 
 ###############################################################################
 
-def visualize_per_exercise(df, column, exercises=None):
-    if exercises:
-        mask = df["DeMortonLabel"].isin(exercises)
+def visualize_per_exercise(df, df_ex, column, labels=None,
+                           hue_by=None, style_by=None, name="data",
+                           out_dir=None, **kwargs):
+    def _zero_time(df):
+        # Because DeMortonLabel was constructed using df_ex, it is
+        # guaranteed that a particular label is always found in df_ex.
+        # The index of df_ex has three levels: Patient, Day, Task
+        pat_ids = df["Patient"].unique()
+        days = df["DeMortonDay"].unique()
+        labels = df["DeMortonLabel"].unique()
+        assert len(pat_ids)==1
+        assert len(days)==1
+        assert len(labels)==1
+        pat_id = pat_ids[0]
+        day = int(days[0])
+        label = labels[0]
+
+        # Avoid a PerformanceWarning (indexing past lexsort depth) by
+        # accessing the date of interest in two steps (performance does
+        # not play a role here).
+        df_ex_sub = df_ex.loc[(pat_id, day)]
+        session_start = df_ex_sub.loc[label, "StartDate"]
+        if not isinstance(session_start, pd.Timestamp):
+            # This is a hack to avoid a problem ()
+            msg = "Multiple StartDates observed: pat_id=%s, day=%s, label=%s"
+            logger.warning(msg, pat_id, day, label)
+            session_start = session_start[0]
+        t = (df["timestamp"] - session_start).dt.total_seconds()
+        t.index = df["timestamp"]
+        return t.to_frame()
+
+    if labels:
+        mask = df["DeMortonLabel"].isin(labels)
     else:
         mask = ~df["DeMortonLabel"].isna()
         mask &= ~df["DeMortonLabel"].isin(["temp", "default"])
     df = df[mask].copy()
     df = df.reset_index()
+    tasks = df_ex.index.get_level_values("Task")
+    df_ex = df_ex[~tasks.isin(["temp", "default"])].copy()
 
-    def _zero_time(df):
-        return (df["timestamp"] - df["timestamp"].min()).dt.total_seconds()
-
+    # Compute for all patients, exercise day and actual exercise (task) the
+    # time since start of the task in seconds.
     group_cols = ["Patient", "Side", "DeMortonDay", "DeMortonLabel"]
+
+    # for key, dd in df.groupby(group_cols):
+    #     print(key)
+    #     print(dd.dtypes)
+    #     print(dd.head())
     t = df.groupby(group_cols).apply(_zero_time)
-    t = t.droplevel(level=None, axis=0)
-    df = df.set_index(group_cols)
+    df = df.set_index(group_cols+["timestamp"])
+
     df["Seconds"] = t
     df = df.reset_index()
-    g = sns.relplot(x="Seconds", y=column, hue="Patient",
-                    style="DeMortonDay", col="DeMortonLabel",
-                    data=df, kind="line", style_order=["1","2","3"],
-                    estimator=None)
-    plt.tight_layout()
-    plt.show()
+    df["Unit"] = df["Patient"]+"-"+df["Side"]+"-"+df["DeMortonDay"]
+
+    for label, df_label in df.groupby("DeMortonLabel"):
+        fig, ax = plt.subplots()
+        if hue_by is None:
+            hue_order = None
+            colors = ["#404040"]
+            kwargs.update(dict(color="#404040"))
+        elif hue_by == "Side":
+            colors = ["#ED5B5D", "#1AAF54",]
+            hue_order = ["left", "right"]
+        elif hue_by == "DeMortonDay":
+            days = df_label["DeMortonDay"].unique()
+            colors_dict = {"1": "#ED5B5D", "2": "#1AAF54", "3": "#2D8FF3"}
+            hue_order = [d for d in colors_dict.keys() if d in days]
+            colors = [colors_dict[d] for d in hue_order]
+        else:
+            hue_order = sorted(df_label[hue_by].unique())
+            colors = sns.color_palette("hls", len(hue_order))
+        sns.lineplot(x="Seconds", y=column, data=df_label,
+                     hue=hue_by, hue_order=hue_order, style=style_by,
+                     units="Unit", alpha=0.7, linewidth=0.75,
+                     palette=colors, ax=ax, estimator=None, **kwargs)
+        ax.grid(True, axis="y")
+        title = "Exercise: " + label
+        n_pats = df_label["Patient"].nunique()
+        n_units = df_label["Unit"].nunique()
+        info = "#pats: %d, #lines: %d" % (n_pats, n_units)
+        ax.set_title(title + "\n" + info)
+        if hue_by == "Patient" and n_pats > 5:
+            hs, ls = ax.get_legend_handles_labels()
+            ax.legend([tuple(hs)], ["Patients"],
+                       handler_map={tuple: HandlerTuple(ndivide=None, pad=0)},
+                       bbox_to_anchor=(1.04,1), loc="upper left")
+        else:
+            ax.legend(bbox_to_anchor=(1.04,1), loc="upper left")
+        plt.tight_layout()
+        if out_dir:
+            save_figure(out_dir/("%s_%s.pdf"% (name, label)), fig=fig,
+                        override=False)
+        plt.close(fig)
+
+
+###############################################################################
+
+def visualize_per_exercise_run(df, df_ex, column,
+                               labels=None, out_dir=None):
+    print_subtitle("Visualizing data per exercise (1)...")
+    visualize_per_exercise(df=df_raw,
+                           df_ex=df_ex,
+                           column=column,
+                           hue_by="Patient",
+                           style_by=None,
+                           name="data",
+                           labels=labels,
+                           out_dir=out_dir / "by_exercise")
+    print_subtitle("Visualizing data per exercise (2)...")
+    visualize_per_exercise(df=df_raw,
+                           df_ex=df_ex,
+                           column=column,
+                           name="data_by_side",
+                           hue_by="Side",
+                           style_by=None,
+                           labels=labels,
+                           out_dir=out_dir / "by_side")
+    print_subtitle("Visualizing data per exercise (3)...")
+    prefix = "Patient {variables.pat_id:<3}... "
+    progress = create_progress_bar(label=None,
+                                   size=df_raw["Patient"].nunique(),
+                                   prefix=prefix,
+                                   variables={"pat_id": "N/A"})
+    progress.start()
+    for i, (pat_id, df_raw_pat) in enumerate(df_raw.groupby("Patient")):
+        progress.update(i, pat_id=pat_id)
+        visualize_per_exercise(df=df_raw_pat,
+                               df_ex=df_ex,
+                               column=column,
+                               name="data_by_pat",
+                               hue_by="DeMortonDay",
+                               style_by="Side",
+                               labels=labels,
+                               out_dir=out_dir / "by_patient" / pat_id)
+    progress.finish()
 
 ###############################################################################
 
 def run(args):
-    setup_logging(verbosity=2, logger=logger)
     data_dir = Path(args.in_dir)
     out_dir = Path(args.out_dir)
     metrics = args.metrics
@@ -522,13 +638,14 @@ def run(args):
     n_pats = args.n_pats
     pats = args.patients
     labels = args.labels
+    setup_logging(verbosity=2, logger=logger)
+    setup_plotting()
     dump_context(out_dir=out_dir)
 
     print_title("Analyzing De Morton exercises:")
     print("    data_dir: %s" % data_dir)
     print("    out_dir: %s" % out_dir)
     print()
-    setup_plotting()
 
     df_vital, df_raw, df_ex = read_data(data_dir=data_dir,
                                         out_dir=out_dir,
@@ -539,6 +656,11 @@ def run(args):
                                         n_pats=n_pats,
                                         pats=pats,
                                         labels=labels)
+    if labels is not None:
+        logger.warning("Availability plots don't make sense for clipped data.")
+        logger.warning("Clipping is enabled if option --label is used.")
+
+    print_subtitle("Visualizing data availability...")
     plot_data_availability(df=df_raw, df_ex=df_ex, column="A",
                            title="Acceleration (magnitude)",
                            labels=labels, out_dir=out_dir)
@@ -546,10 +668,13 @@ def run(args):
                            title="Acceleration (magnitude)",
                            labels=labels, out_dir=out_dir,
                            show_ex=False)
+    visualize_per_exercise_run(df=df_raw,
+                               df_ex=df_ex,
+                               column="A",
+                               labels=labels,
+                               out_dir=out_dir)
 
-    # visualize_per_exercise(df=df_raw,
-    #                        column="A",
-    #                        exercises=["2a", "2b"])
+
 
 ###############################################################################
 
