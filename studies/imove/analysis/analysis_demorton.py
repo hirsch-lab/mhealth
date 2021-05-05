@@ -19,8 +19,8 @@ from mhealth.utils.context_info import dump_context
 from mhealth.utils.commons import create_progress_bar
 from mhealth.patient.imove_label_loader import merge_labels
 from mhealth.utils.file_helper import ensure_dir, write_hdf
-from mhealth.utils.commons import print_title, setup_logging
 from mhealth.utils.plotter_helper import save_figure, setup_plotting
+from mhealth.utils.commons import print_title, print_subtitle, setup_logging
 
 DEFAULT_COLUMNS = [ "HR", "AX", "AY", "AZ", "A" ]
 
@@ -177,6 +177,7 @@ def read_data(data_dir, out_dir, columns, resample,
         dfs_50Hz = [df for df in dfs_50Hz if df is not None]
         df_01Hz = None
         df_50Hz = None
+        is_clipped = False
         if dfs_01Hz:
             df_01Hz = pd.concat(dfs_01Hz, axis=0)
         if dfs_50Hz:
@@ -184,10 +185,12 @@ def read_data(data_dir, out_dir, columns, resample,
         if labels is not None:
             logger.info("Reading data for De Morton labels: %s",
                         ", ".join(labels))
+            # This clips data: include sensor data only when exercising.
             df_01Hz = df_01Hz[df_01Hz["DeMortonLabel"].isin(labels)]
             df_50Hz = df_50Hz[df_50Hz["DeMortonLabel"].isin(labels)]
+            is_clipped = True
         logger.info("Done!")
-        return df_01Hz, df_50Hz
+        return df_01Hz, df_50Hz, is_clipped
 
     def _read_data_lazily(out_dir, cols_01Hz, cols_50Hz,
                           n_pats=None, pats=None, labels=None,
@@ -204,6 +207,7 @@ def read_data(data_dir, out_dir, columns, resample,
                     if mode != "from_exercises"
         """
         assert mode in ("all", "from_exercises")
+        is_clipped = False
         if mode == "all":
             filepath = out_dir / "store" / "demorton.h5"
             if not filepath.is_file():
@@ -213,6 +217,14 @@ def read_data(data_dir, out_dir, columns, resample,
             df_vital = store["vital"]
             df_raw = store["raw"]
             store.close()
+            # We don't know how the data was stored.
+            is_clipped = "maybe"
+            if labels is not None:
+                logger.info("Reading data for De Morton labels: %s",
+                            ", ".join(labels))
+                df_vital = df_vital[df_vital["DeMortonLabel"].isin(labels)]
+                df_raw = df_raw[df_raw["DeMortonLabel"].isin(labels)]
+                is_clipped = True
         if mode == "from_exercises":
             files = sorted((out_dir / "store").glob("ex*.h5"))
             if not files:
@@ -222,6 +234,10 @@ def read_data(data_dir, out_dir, columns, resample,
             if labels is not None:
                 logger.info("Lazy loading data for De Morton labels: %s",
                             ", ".join(labels))
+            # In mode==from_exercises, the data is clipped, regardless of
+            # the value of labels. Clipped data means: sensor data only
+            # when patient is exercising.
+            is_clipped = True
             for filepath in files:
                 label = filepath.stem
                 label = label.replace("ex-", "")
@@ -230,6 +246,7 @@ def read_data(data_dir, out_dir, columns, resample,
                 store = pd.HDFStore(filepath, mode="r")
                 dfs_vital.append(store["vital"])
                 dfs_raw.append(store["raw"])
+                store.close()
             df_vital = pd.concat(dfs_vital, axis=0)
             df_raw = pd.concat(dfs_raw, axis=0)
 
@@ -271,7 +288,7 @@ def read_data(data_dir, out_dir, columns, resample,
             # Force re-reading.
             df_raw = None
         logger.info("Done!")
-        return df_vital, df_raw
+        return df_vital, df_raw, is_clipped
 
     def _save_data(out_dir, df_vital, df_raw, split_exercises=True):
         logger.info("Writing data...")
@@ -300,26 +317,37 @@ def read_data(data_dir, out_dir, columns, resample,
     df_vital = df_raw = None
     if not forced:
         lazy_mode = "from_exercises" if labels else "all"
-        df_vital, df_raw = _read_data_lazily(out_dir=out_dir,
-                                             cols_01Hz=cols_01Hz,
-                                             cols_50Hz=cols_50Hz,
-                                             n_pats=n_pats,
-                                             pats=pats,
-                                             labels=labels,
-                                             mode=lazy_mode)
+        ret = _read_data_lazily(out_dir=out_dir,
+                                cols_01Hz=cols_01Hz,
+                                cols_50Hz=cols_50Hz,
+                                n_pats=n_pats,
+                                pats=pats,
+                                labels=labels,
+                                mode=lazy_mode)
+        df_vital, df_raw, is_clipped = ret
     if df_vital is None or df_raw is None:
-        df_vital, df_raw = _read_data_stores(data_dir=data_dir/"store",
-                                             cols_01Hz=cols_01Hz,
-                                             cols_50Hz=cols_50Hz,
-                                             resample=resample,
-                                             side=side,
-                                             n_pats=n_pats,
-                                             pats=pats,
-                                             labels=labels)
+        ret = _read_data_stores(data_dir=data_dir/"store",
+                                cols_01Hz=cols_01Hz,
+                                cols_50Hz=cols_50Hz,
+                                resample=resample,
+                                side=side,
+                                n_pats=n_pats,
+                                pats=pats,
+                                labels=labels)
+        df_vital, df_raw, is_clipped = ret
         # Save for lazy loading.
         _save_data(out_dir=out_dir,
                    df_vital=df_vital,
                    df_raw=df_raw)
+
+    # --labels enables clipping.
+    if is_clipped == True:
+        logger.warning("Sensor data is clipped with exercise windows.")
+    elif is_clipped == "maybe":
+        logger.info("Lazily loaded sensor data is not clipped...")
+        logger.info("...unless it was clipped when creating the store.")
+    else:
+        logger.info("Sensor data is not clipped.")
 
     df_ex = pd.read_csv(data_dir/"exercises.csv")
     df_ex["Patient"] = df_ex["Patient"].map("{:03d}".format)
@@ -346,6 +374,12 @@ def plot_data_availability(df, df_ex, column, title, labels,
                 continue
             start = df_ex.loc[o, "Start"]
             stop = df_ex.loc[o, "Stop"]
+            if not np.isscalar(start):
+                # TODO fix this in the data.
+                start = start.values[0]
+                stop = stop.values[0]
+                msg = "Multiple labels observed: label=%s"
+                logger.warning(msg, o)
             rect = plt.Rectangle(xy=(start, x+offset-width/2),
                                  width=stop-start,
                                  height=width, color=c,
@@ -415,7 +449,11 @@ def plot_data_availability(df, df_ex, column, title, labels,
         for day in days:
             ex = df_ex.loc[(pat_id, day)].copy()
             # Reference time: StartDate of exercise 1.
-            assert ex.loc["1", "StartDate"] == ex["StartDate"].min()
+            if ex.loc["1", "StartDate"] != ex["StartDate"].min():
+                idx_min = ex["StartDate"].argmin()
+                msg = ("Session %s for pat_id=%s (%s) starts with exercise %s "
+                       "instead of 1.")
+                logger.warning(msg, day, pat_id, side, ex.iloc[idx_min].name)
             session_start = ex["StartDate"].min()
             session_end = ex["EndDate"].max()
             delta_total = (session_end - session_start).total_seconds()
@@ -472,6 +510,7 @@ def plot_data_availability(df, df_ex, column, title, labels,
     ax.spines["right"].set_visible(False)
     ax.spines["top"].set_visible(False)
     ax.set_xlabel("Time [s]")
+    ax.set_ylim([0.25, len(grouping)+0.75])
     title = "Data availability: %s" % title
     if labels:
         title += ("\n*** Sensor data only for labels: %s ***"
@@ -592,7 +631,7 @@ def visualize_per_exercise(df, df_ex, column, labels=None,
 def visualize_per_exercise_run(df, df_ex, column,
                                labels=None, out_dir=None):
     print_subtitle("Visualizing data per exercise (1)...")
-    visualize_per_exercise(df=df_raw,
+    visualize_per_exercise(df=df,
                            df_ex=df_ex,
                            column=column,
                            hue_by="Patient",
@@ -601,7 +640,7 @@ def visualize_per_exercise_run(df, df_ex, column,
                            labels=labels,
                            out_dir=out_dir / "by_exercise")
     print_subtitle("Visualizing data per exercise (2)...")
-    visualize_per_exercise(df=df_raw,
+    visualize_per_exercise(df=df,
                            df_ex=df_ex,
                            column=column,
                            name="data_by_side",
@@ -612,13 +651,13 @@ def visualize_per_exercise_run(df, df_ex, column,
     print_subtitle("Visualizing data per exercise (3)...")
     prefix = "Patient {variables.pat_id:<3}... "
     progress = create_progress_bar(label=None,
-                                   size=df_raw["Patient"].nunique(),
+                                   size=df["Patient"].nunique(),
                                    prefix=prefix,
                                    variables={"pat_id": "N/A"})
     progress.start()
-    for i, (pat_id, df_raw_pat) in enumerate(df_raw.groupby("Patient")):
+    for i, (pat_id, df_pat) in enumerate(df.groupby("Patient")):
         progress.update(i, pat_id=pat_id)
-        visualize_per_exercise(df=df_raw_pat,
+        visualize_per_exercise(df=df_pat,
                                df_ex=df_ex,
                                column=column,
                                name="data_by_pat",
@@ -657,8 +696,10 @@ def run(args):
                                         pats=pats,
                                         labels=labels)
     if labels is not None:
-        logger.warning("Availability plots don't make sense for clipped data.")
-        logger.warning("Clipping is enabled if option --label is used.")
+        # TODO: check
+        msg = ("Clipping is enabled by using option --labels. Availability "
+               "plots will show only clipped data.")
+        logger.warning(msg)
 
     print_subtitle("Visualizing data availability...")
     plot_data_availability(df=df_raw, df_ex=df_ex, column="A",
@@ -668,13 +709,14 @@ def run(args):
                            title="Acceleration (magnitude)",
                            labels=labels, out_dir=out_dir,
                            show_ex=False)
+
+    # The output is identical with / without clipping.
+    # The output is identical if labels is set or not.
     visualize_per_exercise_run(df=df_raw,
                                df_ex=df_ex,
                                column="A",
                                labels=labels,
                                out_dir=out_dir)
-
-
 
 ###############################################################################
 
@@ -705,7 +747,9 @@ def parse_args():
     parser.add_argument("-p", "--patients", default=None, type=str, nargs="*",
                         help="List of patients to include (format: '%%03d')")
     parser.add_argument("-l", "--labels", default=None, type=str, nargs="*",
-                        help="List of De Morton labels to include")
+                        help=("List of De Morton labels to include. Note: "
+                              "this enables clipping of the data with the "
+                              "exercise windows."))
     parser.set_defaults(func=run)
     return parser.parse_args()
 
