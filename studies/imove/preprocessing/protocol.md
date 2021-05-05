@@ -54,6 +54,8 @@ python "preprocess_exercises.py" \
         - df → default
         - def → default
         - defaukt → default
+    - For patient 042, day 1: Task 2c occurs twice.   
+      Resolution: I believe that the duplicate entry was mistaken for Task 2d.
 
 
 
