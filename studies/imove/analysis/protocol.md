@@ -30,7 +30,7 @@ python "analysis_demorton.py" \
 # Better limit the number of patients shown/loaded.
 python "analysis_demorton.py" \
             --in-dir "$IMOVE_DATA/extracted/quality50" \
-            --out-dir "../output/analysis/demorton_resample0.2" \          
+            --out-dir "../output/analysis/demorton_resample0.2" \
             --resample 0.2 --n-pats 20
             
 # Visualize data only for selected patients and exercises.

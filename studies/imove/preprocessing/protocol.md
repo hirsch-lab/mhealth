@@ -56,6 +56,7 @@ python "preprocess_exercises.py" \
         - defaukt → default
     - For patient 042, day 1: Task 2c occurs twice.   
       Resolution: I believe that the duplicate entry was mistaken for Task 2d.
+    - The exercise session 2 for patient 056 starts with Task 2a instead of 1.
 
 
 

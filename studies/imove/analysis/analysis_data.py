@@ -189,6 +189,8 @@ def run(args):
     print("    out_dir:", out_dir)
     print()
 
+    # Original: data before DeMorton extraction
+    # Original filtered: data before DeMorton extraction, quality filtered
     path_before = data_dir / "summary_vital_original.csv"
     path_after = data_dir / "summary_vital_original_filtered.csv"
     df_before = read_summary(path_before)

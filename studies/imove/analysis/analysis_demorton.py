@@ -211,7 +211,7 @@ def read_data(data_dir, out_dir, columns, resample,
         if mode == "all":
             filepath = out_dir / "store" / "demorton.h5"
             if not filepath.is_file():
-                return None, None
+                return None, None, False
             logger.info("Reading data lazily...")
             store = pd.HDFStore(filepath, mode="r")
             df_vital = store["vital"]
@@ -228,7 +228,7 @@ def read_data(data_dir, out_dir, columns, resample,
         if mode == "from_exercises":
             files = sorted((out_dir / "store").glob("ex*.h5"))
             if not files:
-                return None, None
+                return None, None, False
             dfs_vital = []
             dfs_raw = []
             if labels is not None:
@@ -513,7 +513,7 @@ def plot_data_availability(df, df_ex, column, title, labels,
     ax.set_ylim([0.25, len(grouping)+0.75])
     title = "Data availability: %s" % title
     if labels:
-        title += ("\n*** Sensor data only for labels: %s ***"
+        title += ("\n*** Labels clipped: %s ***"
                   % ", ".join(labels))
     ax.set_title(title)
     plt.tight_layout()
