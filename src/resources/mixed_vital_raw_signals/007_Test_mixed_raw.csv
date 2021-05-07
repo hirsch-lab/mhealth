@@ -1,4 +1,4 @@
-HR;HRQ;SPo2;SPO2Q;BloodPressure;BloodPerfusion;Activity;Classification;QualityClassification;steps;Energy;RespRate;HRV;phase;phase.1;localtemp;objtemp;baromtemp;pressure;timestamp
+HR;HRQ;SpO2;SpO2Q;BloodPressure;BloodPerfusion;Activity;Classification;QualityClassification;Steps;Energy;RespRate;HRV;Phase;PhaseInt;LocalTemp;ObjTemp;BaromTemp;Pressure;timestamp
 74;72;60;0;33;0.04;3.921568628;9;62;0;134;16;0;21;24;31.91;32.38;32.75;994.6;2019-01-08 09:04:33+00:00
 75;72;60;0;31;0.04;2.745098039;9;61;0;136;19;0;21;24;31.91;32.38;32.63;994.2;2019-01-08 09:04:34+00:00
 75;72;60;0;30;0.04;3.529411765;9;60;0;138;19;0;21;24;31.91;32.38;32.75;994.5;2019-01-08 09:04:35+00:00
