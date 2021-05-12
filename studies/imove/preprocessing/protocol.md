@@ -3,7 +3,7 @@
 To trigger the complete preprocessing: 
 
 ```bash
-# Step 1 (runs 2-3 minutes)
+# Step 1 (runs a couple of seconds)
 python "preprocess_exercises.py" \
             --in-dir "$IMOVE_DATA/original/exercises/" \
             --out-dir "../output/preprocessed/"
