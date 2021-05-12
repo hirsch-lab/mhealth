@@ -13,6 +13,7 @@ if not ret:
     src_path = (dir_path.parent / "src").resolve()
     sys.path.insert(0, str(src_path))
 
+from mhealth.utils.context_info import dump_context
 from mhealth.utils.commons import create_progress_bar
 from mhealth.utils.file_helper import read_hdf, write_csv
 
@@ -61,6 +62,8 @@ def run(args):
     key_sep = args.key_sep
     forced = args.forced
     glob = args.glob
+
+    dump_context(out_dir)
     start = time.time()
     if in_path.is_file():
         files = convert_single(path=in_path, out_dir=out_dir,
