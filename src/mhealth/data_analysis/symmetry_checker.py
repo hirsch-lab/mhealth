@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from ..utils.commons import create_progress_bar
 from ..patient.patient_data_loader import PatientDataLoader
 
 
@@ -60,23 +61,7 @@ class SymmetryChecker:
         self._resample = resample
         self._columns = columns
 
-    def _load_data(self, file_left, file_right):
-        def cols_filter(x):
-            # Ensure only columns with dtype float.
-            return x not in ["DeMortonLabel"]
-        from collections import defaultdict
-        dtypes = defaultdict(lambda: float)
-        dtypes["timestamp"] = str
-        df_left = self._loader.load_everion_patient_data(dir_name=self._data_dir,
-                                                         filename=file_left.name,
-                                                         csv_delimiter=';',
-                                                         usecols=cols_filter,
-                                                         dtype=dtypes)
-        df_right = self._loader.load_everion_patient_data(dir_name=self._data_dir,
-                                                          filename=file_right.name,
-                                                          csv_delimiter=';',
-                                                          usecols=cols_filter,
-                                                          dtype=dtypes)
+    def _format_data(self, df_left, df_right):
         has_morton = ("DeMorton" in df_left) and ("DeMorton" in df_right)
         read_columns = (self._columns+["DeMorton"]) if has_morton else self._columns
         df_left = df_left.set_index("timestamp")
@@ -97,7 +82,6 @@ class SymmetryChecker:
             if "DeMorton" in df:
                 df["DeMorton"] = df["DeMorton"] > 0.5
         return df
-
 
     def _analyze_per_patient(self, df, col, pid):
         x = df[col]
@@ -171,7 +155,7 @@ class SymmetryChecker:
 
         if self._out_dir:
             filename = ("bland-altman-%s-%s.png" % (col.lower(), pid))
-            path = self._out_dir / "plots" / filename
+            path = self._out_dir / "plots" / col / filename
             save_figure(path=path, fig=fig)
         plt.close(fig)
 
@@ -203,25 +187,35 @@ class SymmetryChecker:
 
 
     def run(self):
-        file_pattern = re.compile(r"([0-9]*)(L|R).*")
-        files = sorted(self._data_dir.glob("*.csv"))
-        files = {file_pattern.match(f.stem).groups():f for f in files}
-        files = pd.Series(files)
+        files = list(sorted(self._data_dir.glob("*.h5")))
         rets = []
-        if files.empty:
+        if len(files)==0:
             warnings.warn("No files found under the following location:\n%s" % self._data_dir)
             return
-        for key, df in files.groupby(level=0):
-            if len(df)!=2:
-                warnings.warn("No matching files found for patient '%s'" % key)
+
+        prefix = "Patient {variables.key:<3}... "
+        progress = create_progress_bar(label=None,
+                                       size=len(files),
+                                       prefix=prefix,
+                                       variables={"key": "N/A"})
+        progress.start()
+        for i, filepath in enumerate(files):
+            key = filepath.stem
+            progress.update(i, key=key)
+            store = pd.HDFStore(filepath, mode="r")
+            if not ("vital/left" in store and "vital/right" in store):
+                warnings.warn("Dataset incomplete: %s" % key)
+                store.close()
                 continue
-            file_left = df[(key, "L")]
-            file_right = df[(key, "R")]
-            df = self._load_data(file_left=file_left, file_right=file_right)
-            print("processing data for patient %s ..." % key)
+            df_left = store["vital/left"]
+            df_right = store["vital/right"]
+            store.close()
+
+            df = self._format_data(df_left=df_left, df_right=df_right)
             for col in self._columns:
                 ret = self._analyze_per_patient(df, col=col, pid=key)
                 rets.append(ret)
+        progress.finish()
 
         rets = pd.concat(rets, axis=1)
         rets.to_csv(self._out_dir / "results.csv")
