@@ -770,7 +770,8 @@ def parse_args():
                         help="Show this help text")
     parser.add_argument("-i", "--in-dir", required=True,
                         help="Input directory")
-    parser.add_argument("-o", "--out-dir", default="../output/preprocessed",
+    parser.add_argument("-o", "--out-dir",
+                        default="../output/analysis/demorton",
                         help="Output directory")
     parser.add_argument("--resample", type=float, default=None,
                         help="Resampling period, in seconds. Default: 1.")

@@ -199,7 +199,9 @@ def extract_data_store(filepath, delta_minutes, quality, max_gap, info):
             measure_info(key=key, case=case, group="original_filtered",
                          df=dfq, info=info)
 
-        df = extract_data(df, delta_minutes=delta_minutes)
+
+        if delta_minutes is not None:
+            df = extract_data(df, delta_minutes=delta_minutes)
         data[key] = df
     data["exercises"] = store.get("exercises")
     store.close()
@@ -234,6 +236,7 @@ def run(args):
     print_title("Extracting De Morton data:")
     print("    data_dir:", data_dir)
     print("    out_dir:", out_dir)
+    print("    margin:", delta_minutes)
     print()
 
     files = list(sorted((data_dir/"store").glob("*.h5")))
@@ -287,9 +290,12 @@ def parse_args():
                         help="Output directory")
     parser.add_argument("--quality", default=50, type=float,
                         help="Threshold for quality filtering")
-    parser.add_argument("--margin", default=15, type=float,
+    parser.add_argument("--margin", default=15,
+                        type=lambda x: None if x in ("", "None", "none") else float(x),
                         help=("Time margin in minutes to collect extra before "
-                              "and after the De Morton exercise sessions."))
+                              "and after the De Morton exercise sessions. "
+                              "Empty string or 'None' disables the clipping "
+                              "of data around De Morton sessions."))
     parser.add_argument("--max-gap", default=36, type=float,
                         help=("Maximal time gap tolerated, in hours. Data "
                               "after an extremal time gap are clipped."))
