@@ -1,5 +1,25 @@
 # iMove data analysis
 
+To trigger the complete analysis:
+
+```bash
+python "analysis_data.py" \
+            --in-dir "$IMOVE_DATA/extracted/quality50/" \
+            --out-dir "../output/analysis/everion_data_q50"
+python "analysis_demorton.py" \
+            --in-dir "$IMOVE_DATA/extracted/quality50" \
+            --out-dir "../output/analysis/demorton" \
+            --metrics A HR
+
+# Convert HDF stores into .csv files.   
+export MHEALTH_ROOT="../../../"
+$MHEALTH_ROOT/bin/hdf2csv.py --in-path "../output/analysis/demorton/store" \
+                             --out-dir "../output/analysis/demorton/csv" 
+            
+```
+
+## 1. General infos
+
 <!--
 IMOVE_DATA="$DATA_ROOT/wearables/studies/usb-imove"
 -->
@@ -56,7 +76,7 @@ See the header of [preprocess_everion.py](https://github.com/hirsch-lab/mhealth/
 
 
 
-## 1. Summary data
+## 2. Summary data
 
 Visualization of the summary data collected in extract\_demorton\_data.py. See [`measure_info()`](https://github.com/hirsch-lab/mhealth/blob/main/studies/imove/preprocessing/extract_demorton_data.py) and the summary files created by the aforementioned script. This data is based only on **vital** data.
 
@@ -88,7 +108,7 @@ python "analysis_data.py" \
 
 
 
-## 2. Visualization data during De Morton exercises
+## 3. Visualization data during De Morton exercises
 
 This script collects data from all patients (both left and right side) during the De Morton exercises as extracted by the extract\_demorton\_data.py. In addition, it combines and aligns the data of all patients. Temporal alignment is  achieved by measuring the time elapsed (in seconds) 
 
