@@ -14,7 +14,7 @@ python "preprocess_everion.py" \
 # Step 3a (runs 15-20 minutes)
 python "extract_demorton_data.py" \
             --in-dir "../output/preprocessed/" \
-            --out-dir "../output/extracted/quality50" \
+            --out-dir "../output/extracted/quality50-clipped" \
             --quality=50 \
             --margin=15
 # Step 3b (no clipping, just quality-filtering)
@@ -158,12 +158,13 @@ python "extract_demorton_data.py" \
 #   --max-gap:          Maximal time gap tolerated, in hours. Data recorded
 #                       after such an extremal time gap are clipped. 
 #                       Default: 36
+#   --csv:              Also create .csv files (not just .h5 stores)
 #
 # Output:
 #   .../store/:         .h5 stores with extracted data per patient. The 
 #                       stores contain the following keys: /exercises/, 
 #                       /vital/left, /vital/right, /raw/left, /raw/right
-#   .../csv/:           Folder with .csv data per patient
+#   .../csv/:           Folder with .csv data per patient (if --csv)
 #   .../exercises.csv:  Identifcal with the _all.csv from step 1
 #   .../summary*.csv:   Statistical summaries for some metrics, evaluated
 #                       before or after quality filtering.

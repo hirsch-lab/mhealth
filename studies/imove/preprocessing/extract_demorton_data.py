@@ -209,6 +209,7 @@ def extract_data_store(filepath, delta_minutes, quality, max_gap, info):
     # Quality filtering, this filters both vital and acc:
     # The actual filter takes place on the data frame for vital data,
     # the accelerometer data will be filtered on the timestamp.
+    # This is step is relatively slow.
     measure_infos(case=case, group="extraction", data=data, info=info)
     quality_filter(data=data, side="left", quality=quality)
     quality_filter(data=data, side="right", quality=quality)
@@ -216,12 +217,14 @@ def extract_data_store(filepath, delta_minutes, quality, max_gap, info):
     return data
 
 
-def write_extracted_data(out_dir, case, data):
+def write_extracted_data(out_dir, case, data, write_csv):
     for key, df in data.items():
         name_csv = case + "_" + key.lower().replace("/", "_") + ".csv"
         path_csv = out_dir / "csv" / case / name_csv
         path_hdf = out_dir / "store" / (case+".h5")
-        write_csv(df=df, path=path_csv)
+        # Writing .csv is relatively slow
+        if write_csv:
+            write_csv(df=df, path=path_csv)
         write_hdf(df=df, path=path_hdf, key=key)
 
 
@@ -231,6 +234,7 @@ def run(args):
     delta_minutes = args.margin
     quality = args.quality
     max_gap = args.max_gap
+    write_csv = args.csv
     dump_context(out_dir=out_dir)
 
     print_title("Extracting De Morton data:")
@@ -256,7 +260,8 @@ def run(args):
                                   delta_minutes=delta_minutes,
                                   quality=quality, max_gap=max_gap,
                                   info=info)
-        write_extracted_data(out_dir=out_dir, case=filepath.stem, data=data)
+        write_extracted_data(out_dir=out_dir, case=filepath.stem,
+                             data=data, write_csv=write_csv)
     progress.finish()
 
     # Copy the exercises file as well
@@ -288,6 +293,8 @@ def parse_args():
                         help="Input directory")
     parser.add_argument("-o", "--out-dir", default="../output/extracted",
                         help="Output directory")
+    parser.add_argument("--csv", action="store_true",
+                        help="Write also .csv files, besides HDF stores.")
     parser.add_argument("--quality", default=50, type=float,
                         help="Threshold for quality filtering")
     parser.add_argument("--margin", default=15,
