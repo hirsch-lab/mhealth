@@ -22,15 +22,18 @@ from mhealth.utils.file_helper import ensure_dir, write_hdf
 from mhealth.utils.plotter_helper import save_figure, setup_plotting
 from mhealth.utils.commons import print_title, print_subtitle, setup_logging
 
-# Ensure that this list contains an entry for both
-# types of data: vital and raw! (Alternatively,
-# revise the lazy-loading mechanism.)
-DEFAULT_COLUMNS = [ "HR", "AX", "AY", "AZ", "A" ]
+# This list must contain at least one vital parameter and at least one.
+# "raw" parameter. (Required by the lazy-loading mechanism)
+DEFAULT_COLUMNS = [ "HR", "HRQ", "SpO2", "SpO2Q", "Activity",
+                    "Classification", "QualityClassification",
+                    "RespRate", "HRV", "AX", "AY", "AZ", "A" ]
 
 # Update this list with metrics that should be made available.
 METRICS_AT_50HZ = { "AX", "AY", "AZ", "A" }
-METRICS_AT_01HZ = { "HR" }
-
+METRICS_AT_01HZ = { "HR", "HRQ", "SpO2", "SpO2Q",
+                    "BloodPressure", "BloodPerfusion", "Activity",
+                    "Classification", "QualityClassification",
+                    "RespRate", "HRV", "LocalTemp", "ObjTemp" }
 logger = logging.getLogger("imove")
 
 
