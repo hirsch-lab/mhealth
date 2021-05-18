@@ -14,13 +14,14 @@ python "preprocess_everion.py" \
 # Step 3a (runs 15-20 minutes)
 python "extract_demorton_data.py" \
             --in-dir "../output/preprocessed/" \
-            --out-dir "../output/extracted/quality50-clipped" \
+            --out-dir "../output/extracted/quality50_clipped" \
             --quality=50 \
-            --margin=15
-# Step 3b (no clipping, just quality-filtering)
+            --margin=15 \
+            --csv
+# Step 3b (no clipping, just quality-filtering, slow!)
 python "extract_demorton_data.py" \
             --in-dir "../output/preprocessed/" \
-            --out-dir "../output/extracted/quality50-full" \
+            --out-dir "../output/extracted/quality50_full" \
             --quality=50 \
             --margin=
 ```
@@ -179,6 +180,5 @@ python "extract_demorton_data.py" \
     - (**Question**: shall we discard the vital data if the sensor data is missing? Currently, we keep it.)
     - Filtering rules: 
         - Heart rate > 0 and 
-        - HRQ > quality and 
-        - QualityClassification > quality
+        - HRQ > quality
 
