@@ -1,9 +1,12 @@
 import unittest
+import pandas as pd
 from pathlib import Path
 
 from ..utils import testing
 from ..utils.file_helper import (ensure_counted_path,
-                                 strip_path_annotation)
+                                 strip_path_annotation,
+                                 read_csv, read_hdf,
+                                 write_csv, write_hdf)
 
 
 class TestCountedPath(testing.TestCase):
@@ -84,6 +87,35 @@ class TestStripAnnotations(testing.TestCase):
         path, annot = strip_path_annotation("path/.h5/file.h5/group/id", ".h5")
         self.assertEqual(path, Path("path/.h5/file.h5"))
         self.assertEqual(annot, "group/id")
+
+
+class TestReadWrite(testing.TestCase):
+    def setUp(self):
+        self.df = pd.DataFrame([[1, "a"], [2, "b"], [3, "c"]],
+                               columns=["i", "ii"])
+        self.out_dir = self.make_test_dir(prefix="out")
+
+    def test_csv(self):
+        path = self.out_dir / "file.csv"
+        ret = write_csv(df=self.df, path=path)
+        self.assertTrue(ret)
+        df = read_csv(path=path, index_col=[0])
+        self.assertTrue(self.df.equals(df))
+
+        key = "test"
+        key_sep = "_"
+        path_with_key = self.out_dir / ("file" + key_sep + key + ".csv")
+        ret = write_csv(df=self.df, path=path, key=key, key_sep=key_sep)
+        self.assertTrue(ret)
+        self.assertIsFile(path_with_key)
+        df = read_csv(path=path_with_key, index_col=[0])
+        self.assertTrue(self.df.equals(df))
+        df, key_ret = read_csv(path=path_with_key,
+                               infer_key=True,
+                               key_sep=key_sep,
+                               index_col=[0])
+        self.assertTrue(self.df.equals(df))
+        self.assertEqual(key, key_ret)
 
 
 if __name__ == "__main__":

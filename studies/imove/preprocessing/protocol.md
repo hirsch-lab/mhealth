@@ -3,7 +3,7 @@
 To trigger the complete preprocessing: 
 
 ```bash
-# Step 1 (runs 2-3 minutes)
+# Step 1 (runs a couple of seconds)
 python "preprocess_exercises.py" \
             --in-dir "$IMOVE_DATA/original/exercises/" \
             --out-dir "../output/preprocessed/"
@@ -11,11 +11,19 @@ python "preprocess_exercises.py" \
 python "preprocess_everion.py" \
             --in-dir "$IMOVE_DATA/original/sensor/" \
             --out-dir "../output/preprocessed/"
-# Step 3 (runs 15-20 minutes)
+# Step 3a (runs 15-20 minutes)
 python "extract_demorton_data.py" \
             --in-dir "../output/preprocessed/" \
-            --out-dir "../output/extracted/quality50" \
-            --quality=50
+            --out-dir "../output/extracted/quality50_clipped" \
+            --quality=50 \
+            --margin=15 \
+            --csv
+# Step 3b (no clipping, just quality-filtering, slow!)
+python "extract_demorton_data.py" \
+            --in-dir "../output/preprocessed/" \
+            --out-dir "../output/extracted/quality50_full" \
+            --quality=50 \
+            --margin=
 ```
 
 <!--
@@ -50,7 +58,7 @@ python "preprocess_exercises.py" \
     - Some typos are fixed with regard the task identifiers:
         - t → temp
         - temo → temp
-        - fault → default **??????**
+        - fault → default
         - df → default
         - def → default
         - defaukt → default
@@ -125,7 +133,7 @@ I decided to go with (1), assuming that the data in the correct format is correc
     - redcurr → RedCurr
     - IRcurr → IRCurr
     - ADCoffs → ADCoeffs
-- See the file [everion_columns.csv](https://github.com/hirsch-lab/mhealth/blob/feature/imove_processing/studies/imove/preprocessing/everion_columns.csv), it determines the columns of the resulting DataFrames, alongside with the dtypes for those columns.
+- See the file [everion_columns.csv](https://github.com/hirsch-lab/mhealth/blob/main/studies/imove/preprocessing/everion_columns.csv), it determines the columns of the resulting DataFrames, alongside with the dtypes for those columns.
 - Unfortunately, the timestamps are not monotonically increasing. See for example patient 003, vital/left, at date 2018-08-14 02:00:27+00:00. 
 - Finally, the information about the the De Morton exercise session (c.f. preprocessing step 1) are also merged into the tables (both raw and vital). This adds three columns: 
     - DeMorton: boolean indicating if a De Morton exercise is currently executed
@@ -145,16 +153,19 @@ python "extract_demorton_data.py" \
 #                       between 0 and 100. Default: 50
 #   --margin:           Determines the amount of data extracted before and
 #                       after the De Morton exercise sessions. Measured in 
-#                       minutes. Default: 15 
+#                       minutes. If set to "None" or "" (empty string), no 
+#                       clipping around De Morton session is applied. 
+#                       Default: 15 
 #   --max-gap:          Maximal time gap tolerated, in hours. Data recorded
 #                       after such an extremal time gap are clipped. 
 #                       Default: 36
+#   --csv:              Also create .csv files (not just .h5 stores)
 #
 # Output:
 #   .../store/:         .h5 stores with extracted data per patient. The 
 #                       stores contain the following keys: /exercises/, 
 #                       /vital/left, /vital/right, /raw/left, /raw/right
-#   .../csv/:           Folder with .csv data per patient
+#   .../csv/:           Folder with .csv data per patient (if --csv)
 #   .../exercises.csv:  Identifcal with the _all.csv from step 1
 #   .../summary*.csv:   Statistical summaries for some metrics, evaluated
 #                       before or after quality filtering.
@@ -169,6 +180,5 @@ python "extract_demorton_data.py" \
     - (**Question**: shall we discard the vital data if the sensor data is missing? Currently, we keep it.)
     - Filtering rules: 
         - Heart rate > 0 and 
-        - HRQ > quality and 
-        - QualityClassification > quality
+        - HRQ > quality
 

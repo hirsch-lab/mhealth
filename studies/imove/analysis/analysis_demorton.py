@@ -22,14 +22,29 @@ from mhealth.utils.file_helper import ensure_dir, write_hdf
 from mhealth.utils.plotter_helper import save_figure, setup_plotting
 from mhealth.utils.commons import print_title, print_subtitle, setup_logging
 
-DEFAULT_COLUMNS = [ "HR", "AX", "AY", "AZ", "A" ]
+# This list must contain at least one vital parameter and at least one.
+# "raw" parameter. (Required by the lazy-loading mechanism)
+DEFAULT_COLUMNS = [ "HR", "HRQ", "SpO2", "SpO2Q", "Activity",
+                    "Classification", "QualityClassification",
+                    "RespRate", "HRV", "AX", "AY", "AZ", "A" ]
 
-# Update if metrics are not available.
+# Update this list with metrics that should be made available.
 METRICS_AT_50HZ = { "AX", "AY", "AZ", "A" }
-METRICS_AT_01HZ = { "HR" }
-
+METRICS_AT_01HZ = { "HR", "HRQ", "SpO2", "SpO2Q",
+                    "BloodPressure", "BloodPerfusion", "Activity",
+                    "Classification", "QualityClassification",
+                    "RespRate", "HRV", "LocalTemp", "ObjTemp" }
 logger = logging.getLogger("imove")
 
+
+def select_df(df_vital, df_raw, column):
+    if column in METRICS_AT_50HZ:
+        return df_raw
+    if column in METRICS_AT_01HZ:
+        return df_vital
+    else:
+        msg = "Update METRICS_AT_01HZ or METRICS_AT_50HZ with: %s"
+        assert False, msg % column
 
 ###############################################################################
 
@@ -309,9 +324,12 @@ def read_data(data_dir, out_dir, columns, resample,
 
     #######################################################
 
-    if columns is None:
-        columns = list(DEFAULT_COLUMNS)
     assert side in ("left", "right", "both")
+    columns_requested = columns
+    columns = set(DEFAULT_COLUMNS)
+    if columns_requested:
+        columns |= set(columns_requested)
+    columns = sorted(columns)
     cols_01Hz, cols_50Hz = _split_by_sampling_rate(columns)
 
     df_vital = df_raw = None
@@ -449,7 +467,10 @@ def plot_data_availability(df, df_ex, column, title, labels,
         for day in days:
             ex = df_ex.loc[(pat_id, day)].copy()
             # Reference time: StartDate of exercise 1.
-            if ex.loc["1", "StartDate"] != ex["StartDate"].min():
+            if "1" not in ex["StartDate"].index:
+                msg = ("Session %s for patient %s (%s) misses Task 1.")
+                logger.warning(msg, day, pat_id, side)
+            elif ex.loc["1", "StartDate"] != ex["StartDate"].min():
                 idx_min = ex["StartDate"].argmin()
                 msg = ("Session %s for pat_id=%s (%s) starts with exercise %s "
                        "instead of 1.")
@@ -581,6 +602,25 @@ def visualize_per_exercise(df, df_ex, column, labels=None,
     t = df.groupby(group_cols).apply(_zero_time)
     df = df.set_index(group_cols+["timestamp"])
 
+    duplicates = df.index.duplicated(keep="last")
+    if duplicates.any():
+        dups = df[duplicates]
+        dups.index = dups.index.remove_unused_levels()
+        logger.warning("Data contains %d duplicated indices from %d patients.",
+                       sum(duplicates), len(dups.index.levels[0]))
+        logger.warning("This is due to non-monotonicity in the timestamps. "
+                       "Dropping duplicates...")
+        df = df[~duplicates].copy()
+        df.index = df.index.remove_unused_levels()
+        # Cannot re-use mask. Order of t is different from df.
+        duplicates = t.index.duplicated(keep="last")
+        t = t[~duplicates].copy()
+        t.index = t.index.remove_unused_levels()
+
+    if len(t)==0:
+        logger.warning("No valid values to proceed with. Bailing out...")
+        return
+
     df["Seconds"] = t
     df = df.reset_index()
     df["Unit"] = df["Patient"]+"-"+df["Side"]+"-"+df["DeMortonDay"]
@@ -630,7 +670,7 @@ def visualize_per_exercise(df, df_ex, column, labels=None,
 
 def visualize_per_exercise_run(df, df_ex, column,
                                labels=None, out_dir=None):
-    print_subtitle("Visualizing data per exercise (1)...")
+    print_subtitle("Visualizing data (%s) per exercise (1)..." % column)
     visualize_per_exercise(df=df,
                            df_ex=df_ex,
                            column=column,
@@ -639,7 +679,7 @@ def visualize_per_exercise_run(df, df_ex, column,
                            name="data",
                            labels=labels,
                            out_dir=out_dir / "by_exercise")
-    print_subtitle("Visualizing data per exercise (2)...")
+    print_subtitle("Visualizing data (%s) per exercise (2)..." % column)
     visualize_per_exercise(df=df,
                            df_ex=df_ex,
                            column=column,
@@ -648,7 +688,7 @@ def visualize_per_exercise_run(df, df_ex, column,
                            style_by=None,
                            labels=labels,
                            out_dir=out_dir / "by_side")
-    print_subtitle("Visualizing data per exercise (3)...")
+    print_subtitle("Visualizing data (%s) per exercise (3)..." % column)
     prefix = "Patient {variables.pat_id:<3}... "
     progress = create_progress_bar(label=None,
                                    size=df["Patient"].nunique(),
@@ -684,6 +724,7 @@ def run(args):
     print_title("Analyzing De Morton exercises:")
     print("    data_dir: %s" % data_dir)
     print("    out_dir: %s" % out_dir)
+    print("    metrics: %s" % ", ".join(metrics))
     print()
 
     df_vital, df_raw, df_ex = read_data(data_dir=data_dir,
@@ -701,22 +742,24 @@ def run(args):
                "plots will show only clipped data.")
         logger.warning(msg)
 
-    print_subtitle("Visualizing data availability...")
-    plot_data_availability(df=df_raw, df_ex=df_ex, column="A",
-                           title="Acceleration (magnitude)",
-                           labels=labels, out_dir=out_dir)
-    plot_data_availability(df=df_raw, df_ex=df_ex, column="A",
-                           title="Acceleration (magnitude)",
-                           labels=labels, out_dir=out_dir,
-                           show_ex=False)
+    for metric in metrics:
+        df = select_df(df_vital=df_vital, df_raw=df_raw, column=metric)
+        print_subtitle("Visualizing data availability (%s)..." % metric)
+        plot_data_availability(df=df, df_ex=df_ex, column=metric,
+                               title="Acceleration (magnitude)",
+                               labels=labels, out_dir=out_dir/"metrics"/metric)
+        plot_data_availability(df=df, df_ex=df_ex, column=metric,
+                               title="Acceleration (magnitude)",
+                               labels=labels, out_dir=out_dir/"metrics"/metric,
+                               show_ex=False)
 
-    # The output is identical with / without clipping.
-    # The output is identical if labels is set or not.
-    visualize_per_exercise_run(df=df_raw,
-                               df_ex=df_ex,
-                               column="A",
-                               labels=labels,
-                               out_dir=out_dir)
+        # The output is identical with / without clipping.
+        # The output is identical if labels is set or not.
+        visualize_per_exercise_run(df=df,
+                                   df_ex=df_ex,
+                                   column=metric,
+                                   labels=labels,
+                                   out_dir=out_dir/"metrics"/metric)
 
 ###############################################################################
 
@@ -730,11 +773,12 @@ def parse_args():
                         help="Show this help text")
     parser.add_argument("-i", "--in-dir", required=True,
                         help="Input directory")
-    parser.add_argument("-o", "--out-dir", default="../output/preprocessed",
+    parser.add_argument("-o", "--out-dir",
+                        default="../output/analysis/demorton",
                         help="Output directory")
     parser.add_argument("--resample", type=float, default=None,
                         help="Resampling period, in seconds. Default: 1.")
-    parser.add_argument("--metrics", default=None, nargs="+",
+    parser.add_argument("--metrics", default=["A"], nargs="+",
                         help="Select a subset of metrics for the analysis")
     parser.add_argument("--side", default="both", type=str,
                         choices=("left", "right", "both"),

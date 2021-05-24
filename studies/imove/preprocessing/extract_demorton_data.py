@@ -20,7 +20,8 @@ KEYS = [
     "raw/right"
 ]
 
-QUALITY_COLS = [ "QualityClassification", "HRQ" ]
+# QUALITY_COLS = [ "QualityClassification", "HRQ" ]
+QUALITY_COLS = [ "HRQ" ]
 
 SAMPLING_RATE_VITAL = 1
 SAMPLING_RATE_SENSOR = 50
@@ -199,7 +200,9 @@ def extract_data_store(filepath, delta_minutes, quality, max_gap, info):
             measure_info(key=key, case=case, group="original_filtered",
                          df=dfq, info=info)
 
-        df = extract_data(df, delta_minutes=delta_minutes)
+
+        if delta_minutes is not None:
+            df = extract_data(df, delta_minutes=delta_minutes)
         data[key] = df
     data["exercises"] = store.get("exercises")
     store.close()
@@ -207,6 +210,7 @@ def extract_data_store(filepath, delta_minutes, quality, max_gap, info):
     # Quality filtering, this filters both vital and acc:
     # The actual filter takes place on the data frame for vital data,
     # the accelerometer data will be filtered on the timestamp.
+    # This is step is relatively slow.
     measure_infos(case=case, group="extraction", data=data, info=info)
     quality_filter(data=data, side="left", quality=quality)
     quality_filter(data=data, side="right", quality=quality)
@@ -214,12 +218,14 @@ def extract_data_store(filepath, delta_minutes, quality, max_gap, info):
     return data
 
 
-def write_extracted_data(out_dir, case, data):
+def write_extracted_data(out_dir, case, data, with_csv):
     for key, df in data.items():
         name_csv = case + "_" + key.lower().replace("/", "_") + ".csv"
         path_csv = out_dir / "csv" / case / name_csv
         path_hdf = out_dir / "store" / (case+".h5")
-        write_csv(df=df, path=path_csv)
+        # Writing .csv is relatively slow
+        if with_csv:
+            write_csv(df=df, path=path_csv)
         write_hdf(df=df, path=path_hdf, key=key)
 
 
@@ -229,11 +235,13 @@ def run(args):
     delta_minutes = args.margin
     quality = args.quality
     max_gap = args.max_gap
+    with_csv = args.csv
     dump_context(out_dir=out_dir)
 
     print_title("Extracting De Morton data:")
     print("    data_dir:", data_dir)
     print("    out_dir:", out_dir)
+    print("    margin: ±%ss" % delta_minutes)
     print()
 
     files = list(sorted((data_dir/"store").glob("*.h5")))
@@ -253,7 +261,8 @@ def run(args):
                                   delta_minutes=delta_minutes,
                                   quality=quality, max_gap=max_gap,
                                   info=info)
-        write_extracted_data(out_dir=out_dir, case=filepath.stem, data=data)
+        write_extracted_data(out_dir=out_dir, case=filepath.stem,
+                             data=data, with_csv=with_csv)
     progress.finish()
 
     # Copy the exercises file as well
@@ -285,11 +294,16 @@ def parse_args():
                         help="Input directory")
     parser.add_argument("-o", "--out-dir", default="../output/extracted",
                         help="Output directory")
+    parser.add_argument("--csv", action="store_true",
+                        help="Write also .csv files, besides HDF stores.")
     parser.add_argument("--quality", default=50, type=float,
                         help="Threshold for quality filtering")
-    parser.add_argument("--margin", default=15, type=float,
+    parser.add_argument("--margin", default=15,
+                        type=lambda x: None if x in ("", "None", "none") else float(x),
                         help=("Time margin in minutes to collect extra before "
-                              "and after the De Morton exercise sessions."))
+                              "and after the De Morton exercise sessions. "
+                              "Empty string or 'None' disables the clipping "
+                              "of data around De Morton sessions."))
     parser.add_argument("--max-gap", default=36, type=float,
                         help=("Maximal time gap tolerated, in hours. Data "
                               "after an extremal time gap are clipped."))

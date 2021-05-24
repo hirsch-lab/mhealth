@@ -127,11 +127,46 @@ def strip_path_annotation(path: PathLike,
 def write_csv(df: PandasData,
               path: PathLike,
               sep: str=",",
-              **kwargs) -> bool:
+              key: Optional[str]=None,
+              key_sep: str="-",
+              exist_ok: bool=True,
+              return_path: bool=False,
+              **kwargs) -> Union[bool, Path, None]:
     path = Path(path)
+    if key is not None:
+        path = path.parent / (path.stem + key_sep + key + path.suffix)
+    if not exist_ok and path.is_file():
+        msg = "File already exists: %s" % path
+        raise FileExistsError(msg)
     if ensure_dir(path.parent):
         df.to_csv(path, sep=sep, **kwargs)
-    return path.is_file()
+    if return_path:
+        return path if path.is_file() else None
+    else:
+        return path.is_file()
+
+
+def read_csv(path: PathLike,
+             sep: str=",",
+             key: Optional[str]=None,
+             key_sep: str="-",
+             infer_key: bool=False,
+             **kwargs) -> pd.DataFrame:
+    path = Path(path)
+    ret_key = False
+    if key is not None:
+        path = path.parent / (path.stem + key_sep + key + path.suffix)
+    elif infer_key:
+        parent = path.parent
+        name = path.stem
+        ret = re.match("^(.*)"+re.escape(key_sep)+"(.*)$", name)
+        if not ret:
+            msg = "Cannot infer key from filepath (separator: '%s'): %s"
+            raise ValueError(msg % (key_sep, path))
+        key = ret.group(2)
+        ret_key = True
+    df = pd.read_csv(path, sep=sep, **kwargs)
+    return (df, key) if ret_key else df
 
 
 def write_hdf(df: PandasData,
@@ -139,23 +174,49 @@ def write_hdf(df: PandasData,
               key: Optional[str]=None,
               format: str="table",
               mode: str="a",
-              **kwargs) -> bool:
+              exist_ok: bool=True,
+              return_path: bool=False,
+              **kwargs) -> Union[bool, Path, None]:
     """
-    Convention: out_path = "path/to/file.h5/sub/path"
+    Convention: path = "path/to/file.h5/sub/path"
                 is equivalent to
-                out_path = "path/to/file.h5"
+                path = "path/to/file.h5"
                 key = "sub/path" if key is None else key
 
     See also my notes here for some understanding:
         https://stackoverflow.com/a/67066662/3388962
     """
     path, annot = strip_path_annotation(path=path, ext=".h5")
+    if not exist_ok and path.is_file():
+        msg = "File already exists: %s" % path
+        raise FileExistsError(msg)
     msg = "Inconsistent specification of storage key: %s, %s"
     assert not (annot and key) or annot==key, msg % (key, annot)
     key = key if key else annot
     if ensure_dir(path.parent):
         df.to_hdf(path, key=key, mode=mode, format=format, **kwargs)
-    return path.is_file()
+    if return_path:
+        return path if path.is_file() else None
+    else:
+        return path.is_file()
+
+
+def read_hdf(path: PathLike,
+             key: Optional[str]=None,
+             format: str="table",
+             mode: str="r",
+             **kwargs) -> pd.DataFrame:
+    """
+    Convention: path = "path/to/file.h5/sub/path"
+                is equivalent to
+                out_path = "path/to/file.h5"
+                key = "sub/path" if key is None else key
+    """
+    path, annot = strip_path_annotation(path=path, ext=".h5")
+    msg = "Inconsistent specification of storage key: %s, %s"
+    assert not (annot and key) or annot==key, msg % (key, annot)
+    key = key if key else annot
+    return pd.read_hdf(path, key=key, mode=mode, format=format, **kwargs)
 
 
 class FileHelper:

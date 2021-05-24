@@ -48,8 +48,6 @@ class IOManager:
     """
     Manager for the abstraction of IO operations.
 
-
-
     Concepts:
         - Manage output creation for different targets with one interface
         - Targets are typically files of a particular type (e.g., .csv, .h5)
