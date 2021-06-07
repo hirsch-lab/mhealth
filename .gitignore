@@ -19,6 +19,6 @@ venv.bak/
 .idea/*
 /venv/
 *.png
-output/
+output*/
 results/
 tmp/
