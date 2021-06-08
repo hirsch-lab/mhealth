@@ -2,9 +2,13 @@ import time
 import argparse
 import numpy as np
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 from pathlib import Path
 
 import context
+from mhealth.utils.plotter_helper import save_figure
 from mhealth.utils.commons import create_progress_bar
 
 # Used if command-line option --parameters is not provided.
@@ -31,6 +35,22 @@ DEVICE_REPLACEMENT_LOOKUP = {
     "2661TL" : ("2661FL", "2021-05-20 00:00:00+02:00", None),
     "2664T"  : ("2664F",  "2021-05-12 00:00:00+02:00", None),
     "2665T"  : ("2665F",  None, "2021-05-19 10:30:00+02:00"),
+}
+# Expected value ranges per vital parameter.
+VALUE_RANGES = {
+    "Atemfrequenz": [0, 35],
+    "Herzfrequenz": [30, 130],
+    "Temperatur":   [35, 40],
+}
+BIN_WIDTHS = {
+    "Atemfrequenz": 0.5,
+    "Herzfrequenz": 1,
+    "Temperatur":   0.01,
+}
+BIN_WIDTHS_VALID = {
+    "Atemfrequenz": 1,
+    "Herzfrequenz": 2,
+    "Temperatur":   0.1,
 }
 
 
@@ -279,7 +299,8 @@ def read_data(data_dir, out_dir, force_read, n_files_max):
     return df_valid, df_sensor
 
 
-def validate_data(df_sensor, df_valid, parameters, skip_zeros):
+def validate_data(df_sensor, df_valid, parameters, skip_zeros,
+                  visualize, out_dir=None, interactive=False):
     if parameters is None:
         parameters = DEFAULT_PARAMETERS.copy()
     iloc = df_valid.columns.get_loc("Wert")
@@ -290,6 +311,54 @@ def validate_data(df_sensor, df_valid, parameters, skip_zeros):
     df_valid.insert(loc=iloc+5, column="Sensor (samples)",   value=None)
     df_valid.insert(loc=iloc+6, column="Sensor (zeros)",     value=None)
     df_valid.insert(loc=iloc+7, column="Fehler (in range)",  value=None)
+
+    def handle_key(event):
+        if event.key in "eEqQ":
+            nonlocal visualize
+            visualize = False
+    def handle_close(evt):
+        nonlocal visualize
+        visualize = False
+    def plot_signal_hist(ax, data, parameter, bed_id, tsv):
+        tsv_str = tsv.strftime("%H:%M (%d.%m.%y)")
+        ax.clear()
+        bw = BIN_WIDTHS[parameter]
+        bin_left = np.round_(data.min(), 2)
+        bin_right = data.max()+bw
+        bins = np.arange(bin_left, bin_right, bw)
+        if len(bins)<=2:
+            bins = [bins[0]-bw] + list(bins) + [bins[-1]+bw]
+        sns.histplot(x=data, kde=True, alpha=0.4, ax=ax, bins=bins)
+        ax.set_title("%s: n=%d, t=%s" % (bed_id, len(data), tsv_str))
+        ax.set_xlabel(parameter)
+        ax.set_ylabel("Counts")
+        ax.grid(axis="y")
+        ax.set_axisbelow(True)
+        #ax.set_xlim(VALUE_RANGES[parameter])
+        ax.set_xticks(bins)
+    def plot_signals(ax, data, ts, parameter, bed_id, tsv):
+        tsv_str = tsv.strftime("%H:%M (%d.%m.%y)")
+        ax.clear()
+        sns.lineplot(x=ts, y=data, ax=ax, color=[0.6]*3)
+        ax.plot([tsv, tsv], [data.min(), data.max()], color="red")
+        ax.grid(axis="y")
+        ax.set_axisbelow(True)
+        ax.set_title("%s: n=%d, t=%s" % (bed_id, len(data), tsv_str))
+        ax.set_xlabel(parameter)
+        ax.set_ylabel("Counts")
+
+    fig1 = fig2 = None
+    if visualize:
+        fig1, ax1 = plt.subplots()
+        fig2, ax2 = plt.subplots()
+        fig1.canvas.mpl_connect("key_release_event", handle_key)
+        fig2.canvas.mpl_connect("key_release_event", handle_key)
+        fig1.canvas.mpl_connect("close_event", handle_close)
+        fig2.canvas.mpl_connect("close_event", handle_close)
+        if interactive:
+            fig1.show()
+            fig2.show()
+
     for parameter in parameters:
         print("Aggregating data for parameter '%s'..." % parameter)
         dfs_all = df_sensor[df_sensor["Vitalparameter"]==parameter]
@@ -308,8 +377,10 @@ def validate_data(df_sensor, df_valid, parameters, skip_zeros):
             ts_stop  = dfv["Timestamp"]+pd.Timedelta(minutes=DELTA_TS)
             i_start  = dfs["Timestamp"].searchsorted(ts_start, side="left")
             i_stop   = dfs["Timestamp"].searchsorted(ts_stop, side="right")
-            for j, (i0, i1) in enumerate(zip(i_start, i_stop)):
+            assert(len(i_start)==len(i_stop)==len(dfv))
+            for j, (i0, i1, tsv) in enumerate(zip(i_start, i_stop, dfv["Timestamp"])):
                 data = dfs.iloc[i0:i1]["Wert"]
+                ts = dfs.iloc[i0:i1]["Timestamp"]
                 if skip_zeros:
                     data = data[data!=0]
                 valid = dfv.iloc[j]["Wert"]
@@ -333,7 +404,119 @@ def validate_data(df_sensor, df_valid, parameters, skip_zeros):
                 df_valid.loc[dfv.index[j], "Sensor (samples)"] = samples
                 df_valid.loc[dfv.index[j], "Sensor (zeros)"] = zeros
                 df_valid.loc[dfv.index[j], "Fehler (in range)"] = is_in_range
+
+                if visualize and len(data)>5:
+                    plot_signal_hist(ax1, data, parameter, bed_id, tsv)
+                    plot_signals(ax2, data, ts, parameter, bed_id, tsv)
+                    if interactive:
+                        fig1.canvas.draw()
+                        fig2.canvas.draw()
+                        while not plt.waitforbuttonpress() and visualize:
+                            pass
+                        fig1.canvas.flush_events()
+                        fig2.canvas.flush_events()
+                    if out_dir:
+                        file_path = out_dir / "signals"
+                        file_path /= "%s_%s_%02d.png" % (bed_id, parameter, j)
+                        save_figure(path=file_path, fig=fig2)
+                        file_path = out_dir / "hists"
+                        file_path /= "%s_%s_%02d.png" % (bed_id, parameter, j)
+                        save_figure(path=file_path, fig=fig1)
+    if fig1:
+        plt.close("all")
     return df_valid
+
+
+def visualize_validation(df_valid, out_dir, skip_zeros):
+    def visualize_all_validation_measurements(dfv, parameter, out_dir):
+        validiert = ~dfv["Sensor (mean)"].isna()
+        bw = BIN_WIDTHS_VALID[parameter]
+        bin_left = np.round_(dfv["Wert"].min(), 2)
+        bin_right = dfv["Wert"].max()+bw
+        bins = np.arange(bin_left, bin_right, bw)
+        fig, ax = plt.subplots()
+        sns.histplot(x=dfv["Wert"], bins=bins, ax=ax, alpha=0.4,
+                     label="Alle Messungen (n=%d)" % len(dfv), kde=True)
+        sns.histplot(x=dfv.loc[validiert, "Wert"], color="black",
+                     bins=bins, ax=ax, alpha=0.3, kde=True,
+                     label="Validierte Messungen (n=%d)" % validiert.sum())
+        ax.legend()
+        ax.set_title("%s: Validierungsdaten (manuell)" % parameter)
+        ax.set_xlabel(parameter)
+        ax.set_ylabel("Counts")
+        ax.grid(axis="y")
+        ax.set_axisbelow(True)
+        file_path = out_dir / ("measurements_%s.png" % parameter)
+        save_figure(path=file_path, fig=fig, dpi=300)
+        plt.close(fig)
+
+    def visualize_errors(dfv, parameter, out_dir):
+        fig, ax = plt.subplots()
+        diff = dfv["Wert"] - dfv["Sensor (mean)"]
+        # Drop nan values (measurements without sensor data).
+        diff = diff[(~diff.isna())]
+        # Crude outlier rejection.
+        diff_crit = np.abs(np.asarray(VALUE_RANGES[parameter])).max()*10
+        diff_mask = diff.abs()>diff_crit
+        if diff_mask.any():
+            df_tmp = dfv.loc[diff_mask[diff_mask].index]
+            df_tmp = df_tmp.drop(["Bemerkungen", "Abweichung_Trageort",
+                                  "Sensor (samples)", "Sensor (zeros)",
+                                  "Sensor (std)", "Sensor (median)",
+                                  "Messüberlappung",
+                                  "Fehler (in range)"],
+                                 axis=1)
+            print()
+            print("Warning: identified and removed outliers:")
+            print(df_tmp)
+            print()
+        diff = diff[~diff_mask]
+        sns.histplot(x=diff, ax=ax, alpha=0.4, kde=True)
+        xlim = np.abs(ax.get_xlim()).max()
+        xlim = [-xlim, xlim]
+        ax.set_xlim(xlim)
+        ax.set_xlabel("Error (valid-sensor.mean())")
+        ax.set_ylabel("Counts")
+        ax.set_title("Messfehler %s" % parameter)
+        ax.grid(axis="y")
+        ax.set_axisbelow(True)
+        # Add patches indicating errors exceeding the limits.
+        ylim = ax.get_ylim()
+        # rect = patches.Rectangle((-DELTAS[parameter], ylim[0]),
+        #                          width=2*DELTAS[parameter],
+        #                          height=ylim[1]-ylim[0],
+        #                          edgecolor=None, facecolor="green", alpha=0.1)
+        # ax.add_patch(rect)
+        ax.plot([-DELTAS[parameter], -DELTAS[parameter]], ylim, linestyle=":",
+                color="red", alpha=0.7)
+        ax.plot([DELTAS[parameter], DELTAS[parameter]], ylim, linestyle=":",
+                color="red", alpha=0.7)
+        ax.set_ylim(ylim)
+        file_path = out_dir / ("errors_%s.png" % parameter)
+        save_figure(path=file_path, fig=fig, dpi=300)
+
+
+    sub_dir_name = "without_zeros" if skip_zeros else "with_zeros"
+    out_dir = out_dir / "validation" / sub_dir_name
+    for parameter, dfv in df_valid.groupby("Vitalparameter"):
+        visualize_all_validation_measurements(dfv=dfv,
+                                              parameter=parameter,
+                                              out_dir=out_dir)
+        visualize_errors(dfv=dfv, parameter=parameter, out_dir=out_dir)
+
+        # Performance metrics of validation:
+        # 1) availability: number of measurements for which validation was
+        #    possible divided by the total number of measurements
+        # 2) inlier_rate: number values within boundaries divided by the
+        #    number of measurements for which validation was possible
+        available = ~dfv["Sensor (mean)"].isna()
+        diff = dfv["Wert"] - dfv["Sensor (mean)"]
+        availability = available.sum()/len(dfv)
+        inlier_rate = (diff.abs()<=DELTAS[parameter]).sum()/available.sum()
+        print()
+        print("Summary for vital parameter: %s" % parameter)
+        print("    availability: %.3f" % availability)
+        print("    inlier_rate:  %.3f" % inlier_rate)
 
 
 def run(args):
@@ -343,18 +526,36 @@ def run(args):
     n_files_max = args.n_files_max
     parameters = args.parameters
     skip_zeros = args.skip_zeros
+    detailed = args.detailed
     ensure_dir(out_dir)
-    df_valid, df_sensor = read_data(data_dir=data_dir,
-                                    out_dir=out_dir,
-                                    force_read=force_read,
-                                    n_files_max=n_files_max)
-    df_valid = validate_data(df_sensor=df_sensor,
-                             df_valid=df_valid,
-                             parameters=parameters,
-                             skip_zeros=skip_zeros)
-    filename = ("validation_zeros_filtered.csv" if skip_zeros else
-                "validation_zeros_not_filtered.csv")
-    df_valid.to_csv(out_dir/filename, index=False)
+    file_name = ("validation_zeros_filtered.csv" if skip_zeros else
+                 "validation_zeros_not_filtered.csv")
+    file_path = out_dir/file_name
+
+    #sns.set_style("ticks")
+    #sns.set_palette("pastel")
+
+    if not file_path.is_file() or force_read:
+        df_valid, df_sensor = read_data(data_dir=data_dir,
+                                        out_dir=out_dir,
+                                        force_read=force_read,
+                                        n_files_max=n_files_max)
+        df_valid = validate_data(df_sensor=df_sensor,
+                                 df_valid=df_valid,
+                                 parameters=parameters,
+                                 skip_zeros=skip_zeros,
+                                 visualize=detailed,
+                                 out_dir=out_dir)
+        df_valid.to_csv(file_path, index=False)
+    else:
+        # Skip computation of validation data if already present.
+        print("Reading validation results for visualization...")
+        print("To rerun the validation delete the results file:")
+        print(file_path)
+        df_valid = pd.read_csv(file_path, parse_dates=["Timestamp"])
+    visualize_validation(df_valid=df_valid,
+                         out_dir=out_dir,
+                         skip_zeros=skip_zeros)
 
 
 def parse_args():
@@ -379,6 +580,8 @@ def parse_args():
     parser.add_argument("--skip-zeros", action="store_true",
                         help=("Skip zero measurements, assuming those are "
                               "invalid"))
+    parser.add_argument("--detailed", action="store_true",
+                        help="Plot additional details (slow).")
     parser.set_defaults(func=run)
     return parser.parse_args()
 
