@@ -509,14 +509,24 @@ def visualize_validation(df_valid, out_dir, skip_zeros):
         #    possible divided by the total number of measurements
         # 2) inlier_rate: number values within boundaries divided by the
         #    number of measurements for which validation was possible
+        # 3) overrun_rate: rate of (averaged) sensor measurements exceeding
+        #    the validation measurement by at least the tolerance. (Bianca
+        #    referred to this measure as "false positive".)
+        # 4) undercut_rate: rate of (averaged) sensor measurements
+        #   undershooting the validation measurement by at least the tolerance.
+        #   (Bianca: "false negative" rate)
         available = ~dfv["Sensor (mean)"].isna()
         diff = dfv["Wert"] - dfv["Sensor (mean)"]
         availability = available.sum()/len(dfv)
         inlier_rate = (diff.abs()<=DELTAS[parameter]).sum()/available.sum()
+        overrun_rate = (diff>DELTAS[parameter]).sum()/available.sum()
+        undercut_rate = (diff<(-DELTAS[parameter])).sum()/available.sum()
         print()
         print("Summary for vital parameter: %s" % parameter)
-        print("    availability: %.3f" % availability)
-        print("    inlier_rate:  %.3f" % inlier_rate)
+        print("    availability:  %.3f" % availability)
+        print("    inlier rate:   %.3f" % inlier_rate)
+        print("    overrun rate:  %.3f    ('false positive')"  % overrun_rate)
+        print("    undercut rate: %.3f    ('false negative')" % undercut_rate)
 
 
 def run(args):
