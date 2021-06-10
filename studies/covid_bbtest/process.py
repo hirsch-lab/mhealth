@@ -336,11 +336,13 @@ def validate_data(df_sensor, df_valid, parameters, skip_zeros,
         ax.set_axisbelow(True)
         #ax.set_xlim(VALUE_RANGES[parameter])
         ax.set_xticks(bins)
-    def plot_signals(ax, data, ts, parameter, bed_id, tsv):
+    def plot_signals(ax, data, ts, parameter, bed_id, tsv, valid):
         tsv_str = tsv.strftime("%H:%M (%d.%m.%y)")
         ax.clear()
         sns.lineplot(x=ts, y=data, ax=ax, color=[0.6]*3)
-        ax.plot([tsv, tsv], [data.min(), data.max()], color="red")
+        ax.plot([tsv], [valid], "o", color="red")
+        ylim = ax.get_ylim()
+        ax.plot([tsv, tsv], ylim, color="red")
         ax.grid(axis="y")
         ax.set_axisbelow(True)
         ax.set_title("%s: n=%d, t=%s" % (bed_id, len(data), tsv_str))
@@ -378,7 +380,9 @@ def validate_data(df_sensor, df_valid, parameters, skip_zeros,
             i_start  = dfs["Timestamp"].searchsorted(ts_start, side="left")
             i_stop   = dfs["Timestamp"].searchsorted(ts_stop, side="right")
             assert(len(i_start)==len(i_stop)==len(dfv))
-            for j, (i0, i1, tsv) in enumerate(zip(i_start, i_stop, dfv["Timestamp"])):
+            for j, (i0, i1, tsv, valid) in enumerate(zip(i_start, i_stop,
+                                                         dfv["Timestamp"],
+                                                         dfv["Wert"])):
                 data = dfs.iloc[i0:i1]["Wert"]
                 ts = dfs.iloc[i0:i1]["Timestamp"]
                 if skip_zeros:
@@ -407,7 +411,7 @@ def validate_data(df_sensor, df_valid, parameters, skip_zeros,
 
                 if visualize and len(data)>5:
                     plot_signal_hist(ax1, data, parameter, bed_id, tsv)
-                    plot_signals(ax2, data, ts, parameter, bed_id, tsv)
+                    plot_signals(ax2, data, ts, parameter, bed_id, tsv, valid)
                     if interactive:
                         fig1.canvas.draw()
                         fig2.canvas.draw()
@@ -428,6 +432,27 @@ def validate_data(df_sensor, df_valid, parameters, skip_zeros,
 
 
 def visualize_validation(df_valid, out_dir, skip_zeros):
+    def filter_outliers(dfv, parameter):
+        diff = dfv["Sensor (mean)"] - dfv["Wert"]
+        # Crude outlier rejection.
+        diff_crit = np.abs(np.asarray(VALUE_RANGES[parameter])).max()*10
+        diff_mask = diff.abs()>diff_crit
+        if diff_mask.any():
+            df_tmp = dfv.loc[diff_mask[diff_mask].index]
+            df_tmp = df_tmp.drop(["Bemerkungen", "Abweichung_Trageort",
+                                  "Sensor (samples)", "Sensor (zeros)",
+                                  "Sensor (std)", "Sensor (median)",
+                                  "Messüberlappung",
+                                  "Fehler (in range)"],
+                                 axis=1)
+            print()
+            print("Warning: identified and removed outliers:")
+            print(df_tmp)
+            print()
+        dfv.loc[diff_mask, "Wert"] = None
+        dfv.loc[diff_mask, "Sensor (mean)"] = None
+        return dfv
+
     def visualize_all_validation_measurements(dfv, parameter, out_dir):
         validiert = ~dfv["Sensor (mean)"].isna()
         bw = BIN_WIDTHS_VALID[parameter]
@@ -452,30 +477,14 @@ def visualize_validation(df_valid, out_dir, skip_zeros):
 
     def visualize_errors(dfv, parameter, out_dir):
         fig, ax = plt.subplots()
-        diff = dfv["Wert"] - dfv["Sensor (mean)"]
+        diff = dfv["Sensor (mean)"] - dfv["Wert"]
         # Drop nan values (measurements without sensor data).
         diff = diff[(~diff.isna())]
-        # Crude outlier rejection.
-        diff_crit = np.abs(np.asarray(VALUE_RANGES[parameter])).max()*10
-        diff_mask = diff.abs()>diff_crit
-        if diff_mask.any():
-            df_tmp = dfv.loc[diff_mask[diff_mask].index]
-            df_tmp = df_tmp.drop(["Bemerkungen", "Abweichung_Trageort",
-                                  "Sensor (samples)", "Sensor (zeros)",
-                                  "Sensor (std)", "Sensor (median)",
-                                  "Messüberlappung",
-                                  "Fehler (in range)"],
-                                 axis=1)
-            print()
-            print("Warning: identified and removed outliers:")
-            print(df_tmp)
-            print()
-        diff = diff[~diff_mask]
         sns.histplot(x=diff, ax=ax, alpha=0.4, kde=True)
         xlim = np.abs(ax.get_xlim()).max()
         xlim = [-xlim, xlim]
         ax.set_xlim(xlim)
-        ax.set_xlabel("Error (valid-sensor.mean())")
+        ax.set_xlabel("Error (sensor.mean()-validation)")
         ax.set_ylabel("Counts")
         ax.set_title("Messfehler %s" % parameter)
         ax.grid(axis="y")
@@ -495,28 +504,74 @@ def visualize_validation(df_valid, out_dir, skip_zeros):
         file_path = out_dir / ("errors_%s.png" % parameter)
         save_figure(path=file_path, fig=fig, dpi=300)
 
+    def visualize_bland_altman(dfv, parameter, out_dir):
+        fig, ax = plt.subplots()
+
+        valid = dfv["Wert"]
+        sensor = dfv["Sensor (mean)"]
+        diff = sensor-valid
+        avg = (valid+sensor)/2
+        diff_mean = diff.mean()
+        diff_std = diff.std()
+        offset_ci = 1.96*diff_std
+        offset_miss = diff.abs().max()*1.2
+        y_off = lambda x, offset: offset*np.ones_like(x)
+
+        h_valid = ax.scatter(avg, diff, c="black", alpha=0.2)
+        xlim = ax.get_xlim()
+        h_mean, = ax.plot(xlim, diff_mean*np.ones(2), "b", zorder=100)
+        h_cip, = ax.plot(xlim, y_off(np.ones(2), +offset_ci), ":r", zorder=100)
+        h_cim, = ax.plot(xlim, y_off(np.ones(2), -offset_ci), ":r", zorder=100)
+        h_tip, = ax.plot(xlim, y_off(np.ones(2), +DELTAS[parameter]), "r",
+                         zorder=100)
+        h_tim, = ax.plot(xlim, y_off(np.ones(2), -DELTAS[parameter]), "r",
+                         zorder=100)
+        h_dummy, = plt.plot([avg.mean()],[0], color="w", alpha=0)
+
+        ax.grid(True)
+        ax.set_axisbelow(True)
+        ax.set_title(f"Bland-Altman ({parameter})")
+        ax.set_xlabel("Mean: (Sensor+Validation)/2")
+        ax.set_ylabel("Difference: (Sensor-Validation)")
+        legend = [(h_mean,   "Mean: %.2f" % diff_mean),
+                  (h_tim,    "Tol: ±%.2f" % (DELTAS[parameter])),
+                  (h_cim,    "95%% CI: ±%.2f" % (1.96*diff_std)),
+                  (h_dummy,  ""),
+                  (h_valid,  "valid")]
+        leg = ax.legend(*zip(*legend),
+                        title="Difference:",
+                        loc="upper left",
+                        bbox_to_anchor=(1.05, 1.02))
+        plt.tight_layout()
+        leg._legend_box.align = "left"
+        for lh in leg.legendHandles:
+            lh.set_alpha(1)
+        file_path = out_dir / ("bland_altman_%s.png" % parameter)
+        save_figure(path=file_path, fig=fig, dpi=300)
 
     sub_dir_name = "without_zeros" if skip_zeros else "with_zeros"
     out_dir = out_dir / "validation" / sub_dir_name
     for parameter, dfv in df_valid.groupby("Vitalparameter"):
+        dfv = filter_outliers(dfv=dfv, parameter=parameter)
         visualize_all_validation_measurements(dfv=dfv,
                                               parameter=parameter,
                                               out_dir=out_dir)
         visualize_errors(dfv=dfv, parameter=parameter, out_dir=out_dir)
+        visualize_bland_altman(dfv=dfv, parameter=parameter, out_dir=out_dir)
 
         # Performance metrics of validation:
         # 1) availability: number of measurements for which validation was
         #    possible divided by the total number of measurements
         # 2) inlier_rate: number values within boundaries divided by the
         #    number of measurements for which validation was possible
-        # 3) overrun_rate: rate of (averaged) sensor measurements exceeding
+        # 3) upper_tail: rate of (averaged) sensor measurements exceeding
         #    the validation measurement by at least the tolerance. (Bianca
         #    referred to this measure as "false positive".)
-        # 4) undercut_rate: rate of (averaged) sensor measurements
-        #   undershooting the validation measurement by at least the tolerance.
-        #   (Bianca: "false negative" rate)
+        # 4) lower_tail: rate of (averaged) sensor measurements
+        #    undershooting the validation measurement by at least the tolerance.
+        #    (Bianca: "false negative" rate)
         available = ~dfv["Sensor (mean)"].isna()
-        diff = dfv["Wert"] - dfv["Sensor (mean)"]
+        diff = dfv["Sensor (mean)"] - dfv["Wert"]
         availability = available.sum()/len(dfv)
         inlier_rate = (diff.abs()<=DELTAS[parameter]).sum()/available.sum()
         overrun_rate = (diff>DELTAS[parameter]).sum()/available.sum()
@@ -525,8 +580,8 @@ def visualize_validation(df_valid, out_dir, skip_zeros):
         print("Summary for vital parameter: %s" % parameter)
         print("    availability:  %.3f" % availability)
         print("    inlier rate:   %.3f" % inlier_rate)
-        print("    overrun rate:  %.3f    ('false positive')"  % overrun_rate)
-        print("    undercut rate: %.3f    ('false negative')" % undercut_rate)
+        print("    upper tail:    %.3f  ('false positive')"  % overrun_rate)
+        print("    lower tail:    %.3f  ('false negative')" % undercut_rate)
 
 
 def run(args):
