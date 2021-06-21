@@ -100,7 +100,6 @@ class DeMorton():
         print(correlation_bmi)
         print(correlation_age)
 
-        #row = 0
         borg_cor = {}
         for patient, day in features_exercise.iterrows():
 
@@ -116,8 +115,6 @@ class DeMorton():
             else:
                 correlation_borg3 = features_exercise.corrwith(target['MeanBorg3'])
                 borg_cor[(pat_id, day)] = correlation_borg3
-
-            #row += 1
 
         target.columns.get_loc('MeanBorg1')
 
