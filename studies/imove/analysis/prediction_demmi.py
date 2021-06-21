@@ -116,8 +116,6 @@ class DeMorton():
                 correlation_borg3 = features_exercise.corrwith(target['MeanBorg3'])
                 borg_cor[(pat_id, day)] = correlation_borg3
 
-        target.columns.get_loc('MeanBorg1')
-
         return correlation_bmi, correlation_age, pd.DataFrame.from_dict(borg_cor)
 
 #################################################################################################################
