@@ -94,27 +94,27 @@ class DeMorton():
 
 #################################################################################################################
 
-    def correlations(self, features_exercise):
-        correlation_bmi = features_exercise.corrwith(target["BMI"])
-        correlation_age = features_exercise.corrwith(target["age"])
+    def correlations(self, features_exercise, target):
+        correlation_bmi = features_exercise.corrwith(target["BMI"], method="spearman")
+        correlation_age = features_exercise.corrwith(target["age"], method="spearman")
         print(correlation_bmi)
         print(correlation_age)
 
         borg_cor = {}
         for patient, day in features_exercise.iterrows():
 
-            pat_id = patient[0]
+            #pat_id = patient[0]
             day = patient[1]
 
             if day == 1.0:
-                correlation_borg1 = features_exercise.corrwith(target['MeanBorg1'])
-                borg_cor[(pat_id, day)] = correlation_borg1
+                correlation_borg1 = features_exercise.corrwith(target['MeanBorg1'], method="spearman")
+                borg_cor[(day)] = correlation_borg1
             elif day == 2.0:
-                correlation_borg2 = features_exercise.corrwith(target['MeanBorg2'])
-                borg_cor[(pat_id, day)] = correlation_borg2
+                correlation_borg2 = features_exercise.corrwith(target['MeanBorg2'], method="spearman")
+                borg_cor[(day)] = correlation_borg2
             else:
-                correlation_borg3 = features_exercise.corrwith(target['MeanBorg3'])
-                borg_cor[(pat_id, day)] = correlation_borg3
+                correlation_borg3 = features_exercise.corrwith(target['MeanBorg3'], method="spearman")
+                borg_cor[(day)] = correlation_borg3
 
         return correlation_bmi, correlation_age, pd.DataFrame.from_dict(borg_cor)
 
@@ -211,7 +211,7 @@ if __name__ == "__main__":
     feat.append(time_ex15)
     print(time_ex15)
 
-    ### Normalize calculated feature to experiment duration
+    ### Acceleration-energy normalized to experiment duration (ex12)
     mask_norm = features.index.get_level_values("Task") == "12"
     acc_energy_norm12 = features["Acc-energy"] / features["Duration"]
     acc_energy_norm12 = acc_energy_norm12.loc[mask_norm]
@@ -220,7 +220,7 @@ if __name__ == "__main__":
     feat.append(acc_energy_norm12)
     print(acc_energy_norm12)
 
-    ### Normalize calculated feature to experiment duration
+    ### Acceleration-energy normalized to experiment duration (ex15)
     mask_norm2 = features.index.get_level_values("Task") == "15"
     acc_energy_norm15 = features["Acc-energy"] / features["Duration"]
     acc_energy_norm15 = acc_energy_norm15.loc[mask_norm2]
@@ -285,15 +285,6 @@ if __name__ == "__main__":
     feat.append(acc_var_ex12)
     print(acc_var_ex12)
 
-    # ### Normalize calculated feature to experiment duration (ex12)
-    # mask_norm_acc = features.index.get_level_values("Task") == "12"
-    # acc_var_norm12 = features["Acc-var"] / features["Duration"]
-    # acc_var_norm12 = acc_var_norm12.loc[mask_norm_acc]
-    # acc_var_norm12 = acc_var_norm12.droplevel("Task")
-    # acc_var_norm12.name = "Acc-var norm to ex12 duration"
-    # feat.append(acc_var_norm12)
-    # print(acc_var_norm12)
-
     ### ACC variance of exercise 15
     mask_acc_var3 = features.index.get_level_values("Task") == "15"
     acc_var_ex15 = features.loc[mask_acc_var3, "Acc-var"]
@@ -301,15 +292,6 @@ if __name__ == "__main__":
     acc_var_ex15.name = "Acceleration variance ex15"
     feat.append(acc_var_ex15)
     print(acc_var_ex15)
-
-    # ### Normalize calculated feature to experiment duration (ex15)
-    # mask_norm_acc2 = features.index.get_level_values("Task") == "15"
-    # acc_var_norm15 = features["Acc-var"] / features["Duration"]
-    # acc_var_norm15 = acc_var_norm15.loc[mask_norm_acc2]
-    # acc_var_norm15 = acc_var_norm15.droplevel("Task")
-    # acc_var_norm15.name = "Acc-var norm to ex15 duration"
-    # feat.append(acc_var_norm15)
-    # print(acc_var_norm15)
 
     features_exercise = pd.concat(feat, axis =1)
 
@@ -319,7 +301,7 @@ if __name__ == "__main__":
     print("Calculate correlations")
     morton_corr = DeMorton()
     #morton_corr.plot_correlations(features_exercise)
-    correlation_bmi, correlation_age, borg_cor = morton_corr.correlations(features_exercise)
+    correlation_bmi, correlation_age, borg_cor = morton_corr.correlations(features_exercise, target)
     print(borg_cor)
     correlation_bmi.to_csv(out_dir / "bmi_features.csv")
     correlation_age.to_csv(out_dir / "age_features.csv")
