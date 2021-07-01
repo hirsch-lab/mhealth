@@ -87,9 +87,6 @@ class DeMorton():
         ret["SpO2-min-quantile"] = df.groupby(["Day", "Side"])["SpO2"].quantile(q=0.05).mean()
         ret["SpO2-max-quantile"] = df.groupby(["Day", "Side"])["SpO2"].quantile(q=0.95).mean()
 
-        # ret["delta-time"] = (df.groupby(["DeMortonDay", "Side"])["timestamp"].max()
-        #                      - df.groupby(["DeMortonDay", "Side"])["timestamp"].min()).dt.total_seconds()
-
         return pd.Series(ret)
 
 #################################################################################################################
@@ -97,28 +94,90 @@ class DeMorton():
     def correlations(self, features_exercise, target):
         correlation_bmi = features_exercise.corrwith(target["BMI"], method="spearman")
         correlation_age = features_exercise.corrwith(target["age"], method="spearman")
+        print("correlation bmi")
         print(correlation_bmi)
+        print("correlation age")
         print(correlation_age)
 
         borg_cor = {}
-        for patient, day in features_exercise.iterrows():
+        for day, df_sub in features_exercise.groupby("Day"):
+            day = int(day)
+            borg_cor[day] = df_sub.corrwith(target['MeanBorg' + str(day)])
+        correlation_borg = pd.DataFrame.from_dict(borg_cor)
+        print("correlation borg")
+        print(correlation_borg)
 
-            #pat_id = patient[0]
-            day = patient[1]
+        borg_all_days = target.reset_index().melt(id_vars=["Patient"],
+                                                  value_vars=["MeanBorg1", "MeanBorg2", "MeanBorg3"],
+                                                  var_name="Day", value_name="MeanBorg")
+        borg_all_days["Day"] = borg_all_days["Day"].str.replace("MeanBorg", "").astype(float)
+        borg_all_days = borg_all_days.set_index(["Patient", "Day"])
+        print(borg_all_days)
+        # borg_cor = features_exercise.corrwith(borg_all_days["MeanBorg"], method="spearman")
+        # print("correlation borg")
+        # print(borg_cor)
 
-            if day == 1.0:
-                correlation_borg1 = features_exercise.corrwith(target['MeanBorg1'], method="spearman")
-                borg_cor[(day)] = correlation_borg1
-            elif day == 2.0:
-                correlation_borg2 = features_exercise.corrwith(target['MeanBorg2'], method="spearman")
-                borg_cor[(day)] = correlation_borg2
-            else:
-                correlation_borg3 = features_exercise.corrwith(target['MeanBorg3'], method="spearman")
-                borg_cor[(day)] = correlation_borg3
+        plot_borg = features_exercise.join(borg_all_days)
+        plot_BMI = features_exercise.join(target["BMI"])
+        plot_age = features_exercise.join(target["age"])
 
-        return correlation_bmi, correlation_age, pd.DataFrame.from_dict(borg_cor)
+        plot_borg = plot_borg.reset_index()
+        plot_BMI = plot_BMI.reset_index()
+        plot_age = plot_age.reset_index()
+        print(plot_borg)
 
-#################################################################################################################
+        d = plot_borg["Acceleration quantile difference ex15"]
+        plot_borg["AccQ15norm"] = (d - d.mean()) / d.std()
+
+        # sns.lmplot(x="MeanBorg", y="HR quantile difference ex15", data=plot_borg,
+        #            ci=None, palette="muted", height=4,
+        #            scatter_kws={"s": 50, "alpha": 1})
+        #
+        # sns.lmplot(x="BMI", y="HR quantile difference ex15", data=plot_BMI,
+        #            ci=None, palette="muted", height=4,
+        #            scatter_kws={"s": 50, "alpha": 1})
+        #
+        # sns.lmplot(x="age", y="HR quantile difference ex15", data=plot_age,
+        #            ci=None, palette="muted", height=4,
+        #            scatter_kws={"s": 50, "alpha": 1})
+        #
+        # sns.lmplot(x="MeanBorg", y="Acc norm to ex12 duration", data=plot_borg,
+        #            ci=None, palette="muted", height=4,
+        #            scatter_kws={"s": 50, "alpha": 1})
+        #
+        # sns.lmplot(x="BMI", y="Acc norm to ex12 duration", data=plot_BMI,
+        #            ci=None, palette="muted", height=4,
+        #            scatter_kws={"s": 50, "alpha": 1})
+        #
+        # sns.lmplot(x="age", y="Acc norm to ex12 duration", data=plot_age,
+        #            ci=None, palette="muted", height=4,
+        #            scatter_kws={"s": 50, "alpha": 1})
+
+
+
+        sns.lmplot(x="MeanBorg", y="Acc norm to ex12 duration", data=plot_borg,
+                   palette="muted", height=4,
+                   scatter_kws={"s": 50, "alpha": 1})
+
+        plt.savefig(out_dir / "borg_AccNorm12.jpg", bbox_inches='tight')
+
+        sns.lmplot(x="BMI", y="Acc norm to ex12 duration", data=plot_BMI,
+                   palette="muted", height=4,
+                   scatter_kws={"s": 50, "alpha": 1})
+
+        plt.savefig(out_dir / "bmi_AccNorm12.jpg", bbox_inches='tight')
+
+        sns.lmplot(x="age", y="Acc norm to ex12 duration", data=plot_age,
+                   palette="muted", height=4,
+                   scatter_kws={"s": 50, "alpha": 1})
+
+        plt.savefig(out_dir / "age_AccNorm12.jpg", bbox_inches='tight')
+        #plt.show()
+
+
+        return correlation_bmi, correlation_age, correlation_borg
+
+    #################################################################################################################
 
     def plot_correlations(self, df):
         if not df.empty:
