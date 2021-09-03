@@ -30,7 +30,7 @@ def split_contiguous(arr: Collection[Scalar],
     if len(arr)==0:
         return []
     op = np.greater_equal if inclusive else np.greater
-    idx = np.where(op(np.diff(arr), tol))[0]+1
+    idx = np.where(op(np.diff(arr), tol))[0]+1  # type: ignore
     if indices:
         chunks = list(zip([0]+idx.tolist(), idx.tolist()+[len(arr)]))
     else:
