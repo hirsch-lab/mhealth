@@ -8,6 +8,12 @@ from influxdb_client import InfluxDBClient
 import context
 from mhealth.utils.file_helper import ensure_dir
 
+"""
+Some basic functionally to upload to and read data from an InfluxDB instance.
+This script was developed for a project of the Digital Futures Lab at ZHAW:
+Project title: Effiziente Visualisierung grosser Datenmengen, 2021
+"""
+
 # Query to create the raw data plots.
 FLUX_QUERY_1 = """
 from(bucket: "testing-wehs-juch")
