@@ -2,6 +2,8 @@ import re
 import warnings
 from pathlib import Path
 
+from mhealth.utils.file_helper import strip_path_annotation
+
 def extract_infos(filename, patterns=None, transformers=None):
     """
     patterns:       A dict of the form {key: pattern}. A collection of
@@ -127,6 +129,7 @@ class IOManager:
              info_patterns=None,
              info_transformers=None,
              target_writers=None,
+             target_readers=None,
              target_names=None,
              skip_existing=False,
              dry_run=False):
@@ -169,6 +172,14 @@ class IOManager:
                             A writer must exist for all targets requested
                             through setting targets (see above). If targets
                             is None, all target_writers will be active.
+            target_readers: A collection of function objects. It is a dict
+                                {target: func}
+                            where func must have the following signature:
+                                def func(path: str, **kwargs) -> any
+                            Here, data can be anything. Currently, readers
+                            are optional. The readers are useful to read
+                            data (from a single target) and to realize
+                            lazy-loading.
             target_names:   An optional collection of string templates to
                             construct the name of the output files.
                             The argument target_names is expected to be a dict
@@ -206,9 +217,11 @@ class IOManager:
         # Target related
         self._targets = [targets] if isinstance(targets, str) else targets
         self._target_writers = _ensure_dict(target_writers, default={})
+        self._target_readers = _ensure_dict(target_readers, default={})
         self._target_names = _ensure_dict(target_names, default={})
-        self._targets = (self._targets if self._targets
-                         else list(self._target_writers.keys()))
+        _targets = list(set(self._target_writers.keys()) |
+                        set(self._target_readers.keys()) )
+        self._targets = (self._targets if self._targets else _targets)
         # Options
         self._skip_existing = skip_existing
         self._dry_run = dry_run
@@ -231,6 +244,8 @@ class IOManager:
         self._info.update(kwargs)
 
     @property
+    def out_dir(self): return self._out_dir
+    @property
     def path(self): return self.get_info(key="path")
     @property
     def name(self): return self.get_info(key="name")
@@ -240,9 +255,19 @@ class IOManager:
         assert bool(self._info), msg
         return self._info
 
+    def check_out_file(self, target, out_dir=None):
+        """
+        Check if the output file for the current file and the
+        specified target exists. Use out_dir to override the global
+        property self.out_dir.
+        """
+        path = self.get_out_path(target=target, out_dir=out_dir)
+        path, _ = strip_path_annotation(path=path, ext=target)
+        return path.is_file()
+
     def get_out_path(self, target, out_dir=None):
         """
-        out_dir overrides global setting self._out_dir
+        out_dir overrides global property self.out_dir.
         """
         out_dir = self._out_dir if out_dir is None else out_dir
         out_dir = Path(out_dir)
@@ -255,6 +280,7 @@ class IOManager:
         targets overrides global setting self._targets
         out_dir overrides global setting self._out_dir
         """
+        targets = [targets] if isinstance(targets, str) else targets
         targets = self._targets if targets is None else targets
         return {t: self.get_out_path(t, out_dir=out_dir) for t in targets}
 
@@ -289,7 +315,8 @@ class IOManager:
             default_name = "{name}"+target
             self._info_targets[target] = {
                 "name": self._target_names.get(target, default_name),
-                "writer": self._target_writers.get(target, None)
+                "writer": self._target_writers.get(target, None),
+                "reader": self._target_readers.get(target, None)
             }
         return True
 
@@ -304,7 +331,7 @@ class IOManager:
         if not self._targets:
             return False
         out_paths = self.get_out_paths(targets=targets, out_dir=out_dir)
-        out_paths = {k:_strip_path_annotations(path=p, target=k)
+        out_paths = {k:strip_path_annotation(path=p, ext=k)[0]
                      for k,p in out_paths.items()}
         exist = [path.is_file() for path in out_paths.values()]
         return all(exist)
@@ -337,3 +364,25 @@ class IOManager:
                 raise RuntimeError(msg % target)
                 continue
         return rets
+
+    def read_target(self, target, data_dir=None, in_path=None, **kwargs):
+        """
+        Read single target file. This selects a target_reader (see __init__())
+        and tries to read a file. Argument data_dir defaults to the output_dir
+        (again see __init__()). The file to read therefore corresponds to the
+        current outfile for the requested target:
+            in_path = get_out_path(target=target)
+        This is useful for loading the output file for a particular target
+        lazily. If data_dir is not None, the path is equivalent to
+            in_path = data_dir / get_out_path(target=target).name
+        It is possible to specify in_path explicitly. In this case, argument
+        data_dir is ignored.
+        """
+        if in_path is None:
+            in_path = self.get_out_path(target=target, out_dir=data_dir)
+        msg = "Cannot read input for requested target: %s" % target
+        assert target in self._info_targets, msg
+        info = self._info_targets[target]
+        func = info["reader"]
+        assert func, msg
+        return func(path=in_path, **kwargs)
