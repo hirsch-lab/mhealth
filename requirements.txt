@@ -9,8 +9,8 @@ natsort>=7.0.1
 seaborn>=0.11.0
 scipy>=1.6.1
 openpyxl>=3.0.7
-codetiming>=1.0.0   # For debugging only
+# codetiming>=1.0.0   # For debugging only
 progressbar2
 GitPython>=3.1.14
 psutil>=5.5
-tables>=3.6         # PyTables, support for HDF stores
+pytables>=3.6         # PyTables, support for HDF stores
