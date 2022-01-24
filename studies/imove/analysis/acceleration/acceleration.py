@@ -49,9 +49,14 @@ h5_001 = store["/raw/right"]
 # demorton_pat001_pat002_pat006.h5 : to develop analysis code
 # 3 Pat: 001, 002, 006, left%right, 
 filepath = '/Users/julien/GD/ACLS/TM/DATA/extracted/quality50_clipped_collected/store/demorton_pat001_pat002_pat006.h5'
+# filepath = '/Users/julien/GD/ACLS/TM/DATA/extracted/quality50_clipped_collected/store/demorton.h5'
+
 store = pd.HDFStore(filepath, mode='r')
 acc = store["raw"]
 acc = acc.reset_index() # create new index -> timestamp becomes a normal col
+
+# acc_all # data of demorton.h5
+
 
 #### Margins around exercices ----------------------------------------------------------------------------
 
