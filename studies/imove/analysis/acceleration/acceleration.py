@@ -140,17 +140,26 @@ def align_timestamp(df):
     df_concat = pd.DataFrame() # empty df
     
     for gid, df_sub in g:    
-        # skipper to omit 'default' group
-        df_sub["time"] = df_sub["timestamp"] - df_sub["timestamp"].min()
-        df_concat = df_concat.append(df_sub)
+        #skipper to omit 'default' group. FUNKTIONIERT DAS WIE ANGEDACHT??
+        if 'default' in gid: # eg: ('3', 'left', '006', 'default')
+            print('gid with "default" excluded')
+            pass
+        else:
+            df_sub["time"] = df_sub["timestamp"] - df_sub["timestamp"].min()
+            df_concat = df_concat.append(df_sub)
         
-    # skip rows of DeMortonLabel 'default'. DIRTY FIX which does not work..
-    df_concat = df_concat[~df_concat.DeMortonLabel.isin('default')]    
-    
     return df_concat
     
 
 #### a ----------------------------------------------------------------------------
 
+
+# g = df_resample.groupby(['DeMortonDay', 'Side', 'Patient', 'DeMortonLabel'])
+# for gid, df_sub in g:      
+#     if 'default' in gid:
+#         print('gid including "default" detected and excluded')
+#         pass
+#     else:
+#         print(gid)
 
 
