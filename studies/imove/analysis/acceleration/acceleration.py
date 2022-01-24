@@ -104,7 +104,7 @@ def put_margins_around_ex(df=acc, demmi_ex=demmi_ex, delta_seconds=delta_seconds
 
 #### RESAMPLE ----------------------------------------------------------------------------
 
-def resample(df, resample=True):
+def resample(df, enable=True): 
     """Resample per specified time unit, for each grouping. 
     Concatenate all resampled groups. Weiss nicht, wie das ohne for loop
     gehen würde. """
@@ -112,7 +112,7 @@ def resample(df, resample=True):
     g = df.groupby(['DeMortonDay', 'Side', 'Patient', 'DeMortonLabel'])
 
     # resample
-    if resample:
+    if enable:
         df_concat = pd.DataFrame()
         
         for gid, df_sub in g:
@@ -131,6 +131,9 @@ def resample(df, resample=True):
         # The index 'timestamp' is now no more unique. Must have a unique index 
         # for plotting. 
         df_concat = df_concat.reset_index() # timestamp becomes a normal col
+        
+    else:
+        df_concat = df
               
     return df_concat
 

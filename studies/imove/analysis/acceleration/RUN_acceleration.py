@@ -40,7 +40,7 @@ exercises = ['2a',' 12', '15']
 df_margins = put_margins_around_ex(df=acc, demmi_ex=exercises, delta_seconds=delta_seconds)
 
 # resample 51Hz to 1sec
-df_resample = resample(df_margins, resample=True) # resample=False
+df_resample = resample(df_margins, enable=True) # enable=False
 
 # align all acc-curves with common starting time = 0
 df_aligned = align_timestamp(df=df_resample)
