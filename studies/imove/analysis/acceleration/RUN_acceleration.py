@@ -1,16 +1,8 @@
 """RUN_acceleration """
 # LIBRARIES ----------------------------------------------------------------------------
 import os
-import sys
-import argparse
-import numpy as np
-import pandas as pd
 import seaborn as sns
-from pathlib import Path
 import matplotlib.pyplot as plt
-from pandasql import sqldf
-from datetime import timedelta
-from collections import defaultdict
 
 # Import own modules
 from acceleration import *
@@ -27,11 +19,16 @@ from mhealth.utils.plotter_helper import save_figure, setup_plotting
 
 
 # PATHS ----------------------------------------------------------------------------
-wd = os.getcwd()
-path_src = '/Users/julien/My Drive/20_STUDIUM/ACLS/05 Module/TM/mhealth/src'
-path_output = '/Users/julien/My Drive/20_STUDIUM/ACLS/05 Module/TM/OUTPUT'
-plots_path = '/Users/julien/My Drive/20_STUDIUM/ACLS/05 MODULE/TM/OUTPUT/plots/'
-path_data = '/Users/julien/GD/ACLS/TM/DATA/'
+
+# @Julien: Pfade und Parameter bitte nur in top-level Scripts. Hier ja, nicht
+# aber in acceleration.py oder context.py.
+# @Julien: Nicht verwendeten Code entfernen
+
+#wd = os.getcwd()
+#path_src = '/Users/julien/My Drive/20_STUDIUM/ACLS/05 Module/TM/mhealth/src'
+#path_output = '/Users/julien/My Drive/20_STUDIUM/ACLS/05 Module/TM/OUTPUT'
+#plots_path = '/Users/julien/My Drive/20_STUDIUM/ACLS/05 MODULE/TM/OUTPUT/plots/'
+#path_data = '/Users/julien/GD/ACLS/TM/DATA/'
 
 # EXECUTION ----------------------------------------------------------------------------
 
@@ -51,7 +48,13 @@ df = df_aligned
 #### PLOT ----------------------------------------------------------------------------
 
 # 1) Aggregated data plot
-sns.lineplot(data=df, x="time", y="A", hue="Patient")
+fig, ax = plt.subplots()
+sns.lineplot(data=df, x="time", y="A", hue="Patient", ax=ax)
+xticks = ax.get_xticks()
+xticks = [pd.to_datetime(tm, unit="ms").strftime('%Y-%m-%d\n %H:%M:%S')
+          for tm in xticks]
+ax.set_xticklabels(xticks, rotation=45)
+fig.tight_layout()
 
 # 2)
 # sns.relplot(
@@ -73,6 +76,13 @@ plot = sns.relplot(
         kind="line"
     )
 plot.fig.suptitle(f'DEMMI Ex. {ex} \n {ex_text}', fontsize=30) # title
+ax = plt.gca()
+xticks = ax.get_xticks()
+xticks = [pd.to_datetime(tm, unit="ms").strftime('%Y-%m-%d\n %H:%M:%S')
+          for tm in xticks]
+ax.set_xticklabels(xticks, rotation=45)
+plt.tight_layout()
+
 
 # 4) All exercises. Specific day
 day = '1'
@@ -84,7 +94,14 @@ plot = sns.relplot(
         hue="Patient", # style="event",
         kind="line"
     )
+ax = plt.gca()
+xticks = ax.get_xticks()
+xticks = ax.get_xticks()
+xticks = [pd.to_datetime(tm, unit="ms").strftime('%Y-%m-%d\n %H:%M:%S')
+          for tm in xticks]
+ax.set_xticklabels(xticks, rotation=45)
 
+plt.show()
                 
                 
                 
