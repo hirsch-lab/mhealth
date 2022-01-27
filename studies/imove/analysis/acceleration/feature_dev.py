@@ -1,4 +1,14 @@
+# FEATURE DEVELOPMENT
 
+# LIBRARIES ----------------------------------------------------------------------------
+import pandas as pd
+import numpy as np
+
+# Import own modules
+from acceleration import align_timestamp
+
+
+# FEATURE DEVELOPMENT ----------------------------------------------------------------------------
 
 # Und dann noch das Rezept für die für die Berechnung der Features.
 # Angenommen, wir möchten verschiedene Features für verschiedene Übungen bestimmen:
@@ -9,6 +19,15 @@
     # Sammle den Output
     # Berechne Mittelwerte
     # Berechne Statistik über verschiedene Patienten
+def XX(df, ex='12'):
+    """Subset input df  """
+    
+    # subset input df (without margins) for specific ex 
+    mask = df.DeMortonDay.eq(day)
+    df = df[mask]
+        
+    
+    
     
     
 # Compute some score
