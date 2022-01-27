@@ -29,3 +29,8 @@ demmi_ex = {
     "14":"Bitte gehen sie 4 Schritte rückwärts.",
     "15":"Bitte springen Sie an Ort"
 }
+
+# Norman: Default bedeutet, dass entweder der Untersucher oder der Patient einen Fehler 
+#im Bewegungsprotokoll gemacht hat und dieses Zeitintervall «stornieren möchte» wir 
+#haben das gemacht, weil es mit der Software nicht möglich war eine einmal bereits 
+#erfasste Zeitrunde zu löschen.

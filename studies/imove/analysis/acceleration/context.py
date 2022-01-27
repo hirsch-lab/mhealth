@@ -10,7 +10,6 @@ sys.path.insert(0, str(src_path))
 
 
 # PATHS ----------------------------------------------------------------------------
-# wd = os.getcwd()
 path_src = '/Users/julien/My Drive/20_STUDIUM/ACLS/05 Module/TM/mhealth/src'
 path_output = '/Users/julien/My Drive/20_STUDIUM/ACLS/05 Module/TM/OUTPUT'
 path_output_plots = '/Users/julien/My Drive/20_STUDIUM/ACLS/05 MODULE/TM/OUTPUT/plots/'
