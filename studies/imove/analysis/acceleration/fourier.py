@@ -7,9 +7,56 @@ from scipy.fft import rfft, rfftfreq
 import context # it can oly import context.py when contained in the same folder as demmi.py
 from demmi_ex_dict import demmi_ex
 
-#### FOURIER TRANSFORMATION ----------------------------------------------------------------------------
+#### FAST FOURIER TRANSFORMATION (FFT) ----------------------------------------------------------------------------
+
+def fourier_transform(df, ex, pat='002', day='2', side='left'):
+    """Version of Norman.
+    Input df MUST NOT BE RESAMPLED BEFORE.
+    Subset input df (ie df_aligned) and run FFT. 
+    Outputs: xf, yf. """
+    
+    # subset inputed df 
+    mask = df.Patient.eq(pat) & df.DeMortonLabel.eq(ex) & df.DeMortonDay.eq(day) & df.Side.eq(side)
+    df = df[mask]
+    
+    SAMPLE_RATE = 51.2  # In Hz. Equivalent to freq (frequency of acc data). 
+    # SAMPLE_RATE determines how many data points the signal uses to represent the sine wave per second
+    # alternatively, calculate freq from data..
+    # timestamps = df_chunk.index
+    # dt = np.diff(timestamps).mean() # Calculate differences bw rows. Mean Zeitabstand bw data points.
+    # 1/timestamps.total_seconds()
+    
+    # calculate duration (= time between start and end of signal)
+    timestamps = df.index
+    dt = np.diff(timestamps).mean() # mean Zeitabstand bw 2 data points [sec]
+    duration = dt * len(timestamps) / SAMPLE_RATE # ist das korrekt?
 
 
+    N = SAMPLE_RATE * duration # number of samples. 
+    N = int(N)
+    
+    # Prints for each ex
+    print("Exercise: ", ex)
+    print("duration of signal is: ", duration, " sec") 
+    print("number of samples: ", N) 
+    print("\n")
+    
+    # Fast Fourier transform (FFT) of acceleration A
+    u = df["A"]
+    
+    # Eliminate static component of g, with this simple method
+    u -= u.mean()  # subtract mean to each A-value (u is Series)
+    
+    yf = rfft(x = u.values) # compute 1-D n-point discrete Fourier Transform (DFT) of a real-valued array. (u.values is numpy.ndarray).
+    # if length of x is even: output is  (n/2)+1. 
+    # if length of x is odd : output is  (n+1)/2. 
+    
+    # rfftfreq(): calculate frequencies in center of each bin. 
+    xf = rfftfreq(n=len(u), d=1/SAMPLE_RATE) # Version NOrman
+    
+    return xf, yf
+
+## ANLEITUNG VON NORMAN für FFT:
 # df_chunk: Data from one patient, one exercise, one day, one side
 # df_chunk = ...
 # freq = 51       
@@ -34,10 +81,11 @@ from demmi_ex_dict import demmi_ex
 # Aber es ist mal ein einfacher Ansatz.
 
 
-
-
-def fourier_transform(df, pat='002', ex='12', day='2', side='left'):
-    """Subset input df (eg df_aligned) and run FFT. Outputs: xf, yf. """
+def fourier_transform_JB(df, pat='002', ex='12', day='2', side='left'):
+    """Version of Julien. Currentely contains a bug.
+    Input df MUST NOT BE RESAMPLED BEFORE.
+    Subset input df (ie df_aligned) and run FFT. 
+    Outputs: xf, yf. """
     
     # subset inputed df 
     mask = df.Patient.eq(pat) & df.DeMortonLabel.eq(ex) & df.DeMortonDay.eq(day) & df.Side.eq(side)
@@ -50,7 +98,6 @@ def fourier_transform(df, pat='002', ex='12', day='2', side='left'):
     print("duration of signal is: ", duration) # 6
 
     SAMPLE_RATE = 51.2  # In Hz. Equivalent to freq (frequency of acc data). 
-    SAMPLE_RATE = 1
     # SAMPLE_RATE determines how many data points the signal uses to represent the sine wave per second
     # alternatively, calculate freq from data..
     # timestamps = df_chunk.index
@@ -69,17 +116,13 @@ def fourier_transform(df, pat='002', ex='12', day='2', side='left'):
     yf = rfft(x = u.values) # compute 1-D n-point discrete Fourier Transform (DFT) of a real-valued array. (u.values is numpy.ndarray).
     # if length of x is even: output is  (n/2)+1. 
     # if length of x is odd : output is  (n+1)/2. 
-    yf[0]; yf[1];yf[2];yf[3]
+    yf[0]; yf[1]; yf[2]; yf[3]
     
     # rfftfreq(): calculate frequencies in center of each bin. 
     xf = rfftfreq(n=N, d=1/SAMPLE_RATE) # n: window length. d: sample spacing (inverse of sample rate)
     # xf = rfftfreq(n=len(u), d=1/SAMPLE_RATE) # alternative
     
     return xf, yf
-
-
-
-
 
 
 

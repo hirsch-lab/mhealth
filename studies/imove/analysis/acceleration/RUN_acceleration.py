@@ -9,8 +9,9 @@ import pickle
 
 import pandas as pd
 import numpy as np
-import seaborn as sns
 import matplotlib.pyplot as plt
+import seaborn as sns
+
 
 # Import own modules
 import context # it can oly import context.py when contained in the same folder as demmi.py
@@ -30,7 +31,24 @@ path_data = '/Users/julien/GD/ACLS/TM/DATA/'
 #path_output = '/Users/julien/My Drive/20_STUDIUM/ACLS/05 Module/TM/OUTPUT'
 #plots_path = '/Users/julien/My Drive/20_STUDIUM/ACLS/05 MODULE/TM/OUTPUT/plots/'
 
-# LOAD DATA ----------------------------------------------------------------------------
+# LOAD DEMMI (acc) DATA ----------------------------------------------------------------------------
+
+load = 'subset' # load demorton_pat001_pat002_pat006.h5. 3 Pat: 001, 002, 006, left&right.
+# load = 'all'  # load demorton.h5 (all data)
+
+if load == 'subset':
+    filepath = '/Users/julien/GD/ACLS/TM/DATA/extracted/quality50_clipped_collected/store/demorton_pat001_pat002_pat006.h5'
+    store = pd.HDFStore(filepath, mode='r')
+    acc = store["raw"]
+    acc = acc.reset_index() # create new index -> timestamp becomes a normal col
+    # acc.info()  # 10 columns
+else:
+    # Load demorton.pickle (=demorton.h5). takes ca 10 sec.
+    filepath = Path(path_data, 'pickle/demorton.pickle')
+    with open(filepath, 'rb') as f:
+        acc = pickle.load(f)
+
+# LOAD exercises.csv ----------------------------------------------------------------------------
 
 ## 1 ## /quality50_clipped/exercises.csv
 # # StartDate, EndDate for each combination of Patient, Day, Task
@@ -38,43 +56,10 @@ path_data = '/Users/julien/GD/ACLS/TM/DATA/'
 # exercises = pd.read_csv(filepath)
 # exercises.Task.unique()
 
-# LOAD DEMMI DATA ----------------------------------------------------------------------------
-
-# load = 'all'  # load demorton.h5 (all data)
-load = 'subset' # load demorton_pat001_pat002_pat006.h5. 3 Pat: 001, 002, 006, left&right.
-
-if load == 'subset':
-    filepath = '/Users/julien/GD/ACLS/TM/DATA/extracted/quality50_clipped_collected/store/demorton_pat001_pat002_pat006.h5'
-    store = pd.HDFStore(filepath, mode='r')
-    acc = store["raw"]
-    acc = acc.reset_index() # create new index -> timestamp becomes a normal col
-    acc.info()  # 10 columns
-else:
-    filepath = '/Users/julien/GD/ACLS/TM/DATA/extracted/quality50_clipped_collected/store/demorton.h5'
-    store = pd.HDFStore(filepath, mode='r')
-    acc_all = store["raw"]
-    acc_all = acc.reset_index() # create new index -> timestamp becomes a normal col
-    acc_all.info() # 11 columns 
-
-# PICKLE ----------------------------------------------------------------------------
-
-pickles_demorton = [acc_all]                            
-                   
-## Save objects to pickle file
-# filepath = Path(path_data, 'pickle/demorton.pickle')
-# with open(filepath, 'wb') as f:
-#     pickle.dump(pickles_demorton, f)    
-    
-# Load pickle file
-# filepath = Path(path_data, 'pickle/demorton.pickle')
-# with open(filepath, 'rb') as f:
-#     acc = pickle.load(f)
-                
-
 # EXECUTION ----------------------------------------------------------------------------
 
-# As margins, put X delta_seconds before&after every specified exercise in exercises
-input_df = acc # acc_all # acc
+# Put margins of 'delta_seconds'  before & after all specified exercises.
+input_df = acc
 exercises = ['2a', '5a','12','15']
 delta_seconds = 10
 df_margins = put_margins_around_ex(df=input_df, demmi_ex=exercises, delta_seconds=delta_seconds)
@@ -90,15 +75,14 @@ df_aligned = align_timestamp(df=df_resample)
 # renaming
 df = df_aligned
 
-# FOURIER TRANSFORM ----------------------------------------------------------------------------
-df_input = df_aligned
+# FOURIER TRANSFORM (for all ex) ----------------------------------------------------------------------------
+df_input = df_aligned # resample(df, enable=False) BEFORE, as no resampling needed!
 pat = '006'
-ex = '15'
 day = '1'
 side = 'right'
 
 for ex in exercises:
-    xf, yf = fourier_transform(df=df_input, pat=pat, ex=ex, day=day, side=side)
+    xf, yf = fourier_transform(df=df_input, ex=ex, pat=pat, day=day, side=side)
     ex_text = demmi_ex[ex]
     plt.plot(xf, np.abs(yf))
     plt.title(f'FFT for Patient {pat}, Day {day}, Side {side} \n Ex {ex}: {ex_text} \n resample={enable}', fontsize=10)
@@ -106,7 +90,7 @@ for ex in exercises:
 
 # PLOTS ----------------------------------------------------------------------------
 
-## A) 1 specific exercise. 3 days.
+## A_plot_demmi) 1 specific exercise. 3 days.
 for ex in exercises:
     ex_text = demmi_ex[ex]
     

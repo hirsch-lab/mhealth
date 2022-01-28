@@ -27,7 +27,7 @@ def XX(df, ex='12'):
     df = df[mask]
         
     
-    
+                                                                                                                            
     
     
 # Compute some score
@@ -46,7 +46,7 @@ def score_spectrum(df):
     # ...
     
 # Example: Compute a score for exercise 12
-data = df.loc[df["DeMortonLabel"]=="12"]
+data = df.loc[df["DeMortonLabel"]=="12"]               
 g = data.groupby(["Patient", "DeMortonDay", "Side"])
 scores_std = g.apply(score_std)   # Same as g["A"].std()
 scores_std.name = "Standard deviation"
