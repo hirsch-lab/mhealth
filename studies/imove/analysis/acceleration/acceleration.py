@@ -76,7 +76,7 @@ def resample(df, rule="1s", enable=True):
         df_ret = df_ret.reset_index()
         # Strangely, g.resample(rule).agg(aggregations), which should give
         # about the same result, is much much slower...
-    else:
+    else: # enable=False
         df_ret = df
         df_ret = df_ret.reset_index()
               

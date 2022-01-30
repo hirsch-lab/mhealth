@@ -12,24 +12,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-
 # Import own modules
 import context # it can oly import context.py when contained in the same folder as demmi.py
 from demmi_ex_dict import demmi_ex                                                          
 from acceleration import put_margins_around_ex, resample, align_timestamp
 from fourier import fourier_transform           
+from feature_dev import feature_development
+
+# Paths
+from paths import path_data
 
 # Modules by Susanne Suter
 #from src.mhealth.utils.commons import print_title
 #from src.mhealth.utils.context_info import dump_context
 from mhealth.utils.plotter_helper import save_figure, setup_plotting
 
-# PATHS ----------------------------------------------------------------------------
-
-path_data = '/Users/julien/GD/ACLS/TM/DATA/'
-#path_src = '/Users/julien/My Drive/20_STUDIUM/ACLS/05 Module/TM/mhealth/src'
-#path_output = '/Users/julien/My Drive/20_STUDIUM/ACLS/05 Module/TM/OUTPUT'
-#plots_path = '/Users/julien/My Drive/20_STUDIUM/ACLS/05 MODULE/TM/OUTPUT/plots/'
 
 # LOAD DEMMI (acc) DATA ----------------------------------------------------------------------------
 
@@ -47,6 +44,9 @@ else:
     filepath = Path(path_data, 'pickle/demorton.pickle')
     with open(filepath, 'rb') as f:
         acc = pickle.load(f)
+        
+# remove variables
+del store, load, filepath
 
 # LOAD exercises.csv ----------------------------------------------------------------------------
 
@@ -55,6 +55,7 @@ else:
 # filepath = '/Users/julien/GD/ACLS/TM/DATA/extracted/quality50_clipped/exercises.csv'
 # exercises = pd.read_csv(filepath)
 # exercises.Task.unique()
+
 
 # EXECUTION ----------------------------------------------------------------------------
 
@@ -75,7 +76,7 @@ df_aligned = align_timestamp(df=df_resample)
 # renaming
 df = df_aligned
 
-# FOURIER TRANSFORM (for all ex) ----------------------------------------------------------------------------
+# FAST FOURIER TRANSFORM with plots (for all ex) ----------------------------------------------------------------------------
 df_input = df_aligned # resample(df, enable=False) BEFORE, as no resampling needed!
 pat = '006'
 day = '1'
@@ -130,7 +131,14 @@ for ex in exercises:
     
 #     plt.show()
 
-# FEATURE DEVELOPMENT ----------------------------------------------------------------------------
+# FEATURE DEVELOPMENT (scores) ----------------------------------------------------------------------------
 
+# only for specific exercise
+# scores = feature_development(df=acc, ex='12') # input is 'acc' (either subset or all)
 
-                
+scores_ALL_ex = pd.DataFrame()
+for ex  in exercises:
+    scores_per_Ex = feature_development(df=acc, ex=ex) # input is 'acc' (either subset or all)
+    scores_ALL_ex = scores_ALL_ex.append(scores_per_Ex)
+ 
+

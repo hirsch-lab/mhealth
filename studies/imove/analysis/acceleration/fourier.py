@@ -13,7 +13,9 @@ def fourier_transform(df, ex, pat='002', day='2', side='left'):
     """Version of Norman.
     Input df MUST NOT BE RESAMPLED BEFORE.
     Subset input df (ie df_aligned) and run FFT. 
-    Outputs: xf, yf. """
+    Outputs: 
+        xf: Array of float64 
+        yf: Array of complex64 """
     
     # subset inputed df 
     mask = df.Patient.eq(pat) & df.DeMortonLabel.eq(ex) & df.DeMortonDay.eq(day) & df.Side.eq(side)

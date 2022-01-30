@@ -1,0 +1,29 @@
+# LIBRARIES ----------------------------------------------------------------------------
+from pathlib import Path
+
+import pandas as pd
+import numpy as np
+from scipy.fft import rfft, rfftfreq
+
+
+# Import own modules
+from acceleration import resample, align_timestamp
+from paths import path_data
+
+
+    
+def score_spectrum(g):
+    """input df is groupby object g. Compute XX of A per group."""
+
+    SAMPLE_RATE = 51.2 # Hz
+    
+    # Fast Fourier transform (FFT) of acceleration A
+    u = g["A"]
+    
+    # Eliminate static component of g, with this simple method
+    u -= u.mean()  # subtract mean to each A-value (u is Series)
+    
+    yf = rfft(x = u.values) # compute 1-D n-point discrete Fourier Transform (DFT) of a real-valued array. (u.values is numpy.ndarray).
+    xf = rfftfreq(n=len(u), d=1/SAMPLE_RATE) # calculate frequencies in center of each bin. 
+    
+    return yf
