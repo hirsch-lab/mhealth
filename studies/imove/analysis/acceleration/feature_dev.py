@@ -61,7 +61,7 @@ def feature_development(df, ex='12'):
         A_std = g["A"].std() # Series
         return A_std
     
-    # 2)
+    # 2) WEISS NICHT, WIE DIESES ZU IMPLEMENTIEREN IST
     def score_kinetic_energy(g, masses): # masses hier entfernen als Argument!
         """input df is groupby object g. 
         Compute kinetic energy given acceleration and mass"""
