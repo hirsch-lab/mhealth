@@ -30,8 +30,8 @@ from mhealth.utils.plotter_helper import save_figure, setup_plotting
 
 # LOAD DEMMI (acc) DATA ----------------------------------------------------------------------------
 
-load = 'subset' # load demorton_pat001_pat002_pat006.h5. 3 Pat: 001, 002, 006, left&right.
-# load = 'all'  # load demorton.h5 (all data)
+# load = 'subset' # load demorton_pat001_pat002_pat006.h5. 3 Pat: 001, 002, 006, left&right.
+load = 'all'  # load demorton.h5 (all data)
 
 if load == 'subset':
     filepath = '/Users/julien/GD/ACLS/TM/DATA/extracted/quality50_clipped_collected/store/demorton_pat001_pat002_pat006.h5'
@@ -39,6 +39,8 @@ if load == 'subset':
     acc = store["raw"]
     acc = acc.reset_index() # create new index -> timestamp becomes a normal col
     # acc.info()  # 10 columns
+    del store
+    
 else:
     # Load demorton.pickle (=demorton.h5). takes ca 10 sec.
     filepath = Path(path_data, 'pickle/demorton.pickle')
@@ -46,7 +48,7 @@ else:
         acc = pickle.load(f)
         
 # remove variables
-del store, load, filepath
+del filepath
 
 # LOAD exercises.csv ----------------------------------------------------------------------------
 
@@ -117,7 +119,7 @@ for ex in exercises:
 #     plot = sns.relplot(
 #             data=df[df.DeMortonDay.eq(day)],  # subset: only specific day
 #             x="time", y="A",
-#             col="Side",  row='DeMortonLabel',
+#             col="Side",  row='DeMortonLabel',    
 #             hue="Patient", # style="event",
 #             kind="line"
 #         )
@@ -140,5 +142,10 @@ scores_ALL_ex = pd.DataFrame()
 for ex  in exercises:
     scores_per_Ex = feature_development(df=acc, ex=ex) # input is 'acc' (either subset or all)
     scores_ALL_ex = scores_ALL_ex.append(scores_per_Ex)
- 
+scores_ALL_ex.to_csv('scores_ALL_ex.csv') # export as csv
+
+
+
+
+
 
