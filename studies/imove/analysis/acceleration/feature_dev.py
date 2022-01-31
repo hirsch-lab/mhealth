@@ -62,7 +62,7 @@ def feature_development(df, ex='12'):
         return A_std
     
     # 2) WEISS NICHT, WIE DIESES ZU IMPLEMENTIEREN IST
-    def score_kinetic_energy(g, masses): # masses hier entfernen als Argument!
+    def score_kinetic_energy(g): # masses wurde hier entfernt als Argument!
         """input df is groupby object g. 
         Compute kinetic energy given acceleration and mass"""
 
@@ -83,11 +83,13 @@ def feature_development(df, ex='12'):
             """for specific patient_ID, return BMI."""
             mask = borg.patient_ID==patient_ID # eg patient_ID = "003"
             bmi = borg.loc[mask, "BMI"]
+            return bmi
             
         def get_patient_mass(patient_ID):
             """for specific patient_ID, return mass, ie weight."""
             mask = borg.patient_ID==patient_ID # eg patient_ID = "003"
             mass = borg.loc[mask, "weight"]
+            return mass
             
     
         # get subgroup's Patient_ID
@@ -96,8 +98,24 @@ def feature_development(df, ex='12'):
         A = g["A"] 
         # f(A) >> v
         # f(v, get_patient_mass(patient_ID)) >> Ek
-        pass # remove again later
-        # return Ek.std()
+        dt = 0.5 # Time step in seconds
+        m = get_patient_mass(patient_ID=g.Patient.first() ) # geht das?
+        
+        ## Method 1: Per patient, day, exercise and side
+        a_filt = A.rolling(window=f"{dt}s") # make 0.5 a string??
+        
+        ## Method 2: Per patient, day, exercise. (Side aggrregated)
+        # a_left = g.loc[df["Side"]=="left", "A"]
+        # a_right = g.loc[df["Side"]=="right", "A"] 
+        # a_left  =  a_left.rolling(window=f"{dt}s")
+        # a_right = a_right.rolling(window=f"{dt}s")
+        # a_filt = 0.5*(a_left+a_right)  # Average acceleration measured at center
+        
+        v_filt = a_filt.cumsum()*dt
+        E_kin = m*v_filt**2
+        E_kin_total = E_kin.sum() # warum aufsummieren?
+        
+        return E_kin_total.std()
         
     # 3)
     def score_spectrum(g):
@@ -129,8 +147,8 @@ def feature_development(df, ex='12'):
     # scores_std = score_std(g) # Alternative zu oben!
     scores_std.name = "Standard deviation"
     
-    # scores_kin = g.apply(score_kinetic_energy)
-    # scores_kin.name = "Kinetic energy"
+    scores_kin = g.apply(score_kinetic_energy)
+    scores_kin.name = "Kinetic energy"
 
     scores_spect = g.apply(score_spectrum)
     scores_spect.name = "Characteristic MEAN frequency"

@@ -30,8 +30,8 @@ from mhealth.utils.plotter_helper import save_figure, setup_plotting
 
 # LOAD DEMMI (acc) DATA ----------------------------------------------------------------------------
 
-# load = 'subset' # load demorton_pat001_pat002_pat006.h5. 3 Pat: 001, 002, 006, left&right.
-load = 'all'  # load demorton.h5 (all data)
+load = 'subset' # load demorton_pat001_pat002_pat006.h5. 3 Pat: 001, 002, 006, left&right.
+# load = 'all'  # load demorton.h5 (all data)
 
 if load == 'subset':
     filepath = '/Users/julien/GD/ACLS/TM/DATA/extracted/quality50_clipped_collected/store/demorton_pat001_pat002_pat006.h5'
