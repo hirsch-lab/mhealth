@@ -62,7 +62,8 @@ def feature_development(df, ex='12'):
         return A_std
     
     # 2) WEISS NICHT, WIE DIESES ZU IMPLEMENTIEREN IST
-    def score_kinetic_energy(g): # masses wurde hier entfernt als Argument!
+    def score_kinetic_energy(g):
+        # masses wurde hier entfernt als Argument!
         """input df is groupby object g. 
         Compute kinetic energy given acceleration and mass"""
 
@@ -87,7 +88,8 @@ def feature_development(df, ex='12'):
             
         def get_patient_mass(patient_ID):
             """for specific patient_ID, return mass, ie weight."""
-            mask = borg.patient_ID==patient_ID # eg patient_ID = "003"
+            mask = borg.patient_ID==patient_ID # list(g.groups.keys())[0]  # eg patient_ID = "003"
+            print(mask)
             mass = borg.loc[mask, "weight"]
             return mass
             
@@ -98,9 +100,12 @@ def feature_development(df, ex='12'):
         A = g["A"] 
         # f(A) >> v
         # f(v, get_patient_mass(patient_ID)) >> Ek
-        dt = 0.5 # Time step in seconds
-        m = get_patient_mass(patient_ID=g.Patient.first() ) # geht das?
+        dt = 1 # 0.5 # Time step in seconds
+        v0 = 0 #  assumption for velocity at time 0 
         
+        # m = get_patient_mass(patient_ID=list(g.groups.keys())[0]  #    # g.Patient.first() ) # geht das?
+        m = 60
+                             
         ## Method 1: Per patient, day, exercise and side
         a_filt = A.rolling(window=f"{dt}s") # make 0.5 a string??
         
@@ -111,11 +116,11 @@ def feature_development(df, ex='12'):
         # a_right = a_right.rolling(window=f"{dt}s")
         # a_filt = 0.5*(a_left+a_right)  # Average acceleration measured at center
         
-        v_filt = a_filt.cumsum()*dt
+        v_filt = a_filt.cumsum()*dt + v0 # cumsum() beginnt bei 0 implizit
         E_kin = m*v_filt**2
         E_kin_total = E_kin.sum() # warum aufsummieren?
         
-        return E_kin_total.std()
+        return E_kin_total
         
     # 3)
     def score_spectrum(g):
@@ -173,13 +178,6 @@ def feature_development(df, ex='12'):
     return scores
     
 #  ----------------------------------------------------------------------------
-
-
-
-
-
-
-
 
 
 
