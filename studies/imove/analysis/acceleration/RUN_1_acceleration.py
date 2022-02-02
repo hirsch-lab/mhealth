@@ -61,7 +61,7 @@ del filepath
 
 # EXECUTION ----------------------------------------------------------------------------
 
-# Put margins of 'delta_seconds'  before & after all specified exercises.
+# Put margins of 'delta_seconds'  before & after all specified exercises. [RangeIndex -> DateTimeIndex]
 input_df = acc
 exercises = ['2a', '5a','12','15']
 delta_seconds = 10
@@ -69,10 +69,10 @@ df_margins = put_margins_around_ex(df=input_df, demmi_ex=exercises, delta_second
 
 # resample 51Hz to 1sec
 enable = False
-# df_resample = resample(df_margins, enable=True) # enable=False
+# df_resample = resample(df_margins, enable=True) # enable=False. [timestamp-index -> index64]
 df_resample = resample(df_margins, enable=enable)
 
-# align all acc-curves with common starting time = 0
+# align all acc-curves with common starting time = 0. [index64 -> index64]
 df_aligned = align_timestamp(df=df_resample)
 
 # renaming
@@ -133,16 +133,7 @@ for ex in exercises:
     
 #     plt.show()
 
-# FEATURE DEVELOPMENT (scores) ----------------------------------------------------------------------------
 
-# only for specific exercise
-# scores = feature_development(df=acc, ex='12') # input is 'acc' (either subset or all)
-
-scores_ALL_ex = pd.DataFrame()
-for ex  in exercises:
-    scores_per_Ex = feature_development(df=acc, ex=ex) # input is 'acc' (either subset or all)
-    scores_ALL_ex = scores_ALL_ex.append(scores_per_Ex)
-scores_ALL_ex.to_csv('scores_ALL_ex.csv') # export as csv
 
 
 

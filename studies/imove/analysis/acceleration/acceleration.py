@@ -54,7 +54,7 @@ def put_margins_around_ex(df, demmi_ex=demmi_ex, delta_seconds=15):
 #### RESAMPLE ----------------------------------------------------------------------------
 
 def resample(df, rule="1s", enable=True):
-    """Resample per specified time unit, for each grouping. 
+    """Resample per specified time unit, for each grouping, calculate mean for A, AX, AY, AZ. 
     Concatenate all resampled groups."""
     if enable:
         aggregations = {
@@ -84,16 +84,44 @@ def resample(df, rule="1s", enable=True):
 
 #### ALIGN ----------------------------------------------------------------------------
 
-def align_timestamp(df):
+def align_timestamp(df, grouping=['Patient', 'DeMortonLabel', 'DeMortonDay', 'Side']):
     """Align timestamps of all subgroups so that all acc-curves can be superimposed on 
     each other."""
     def compute_time(df):
         df["time"] = df["timestamp"] - df["timestamp"].min()
         return df
-    g = df.groupby(['Patient', 'DeMortonLabel', 'DeMortonDay', 'Side'])
+    g = df.groupby(grouping)
     return g.apply(compute_time)
 
-
+#### resample_kinE ----------------------------------------------------------------------------
+def resample_kinE(df, rule, enable=True): # "1s"
+    """Resample per specified time unit, for each grouping, calculate mean for A, AX, AY, AZ. 
+    Concatenate all resampled groups."""
+    if enable:
+        aggregations = {
+                         'A': 'mean',
+                        'AX': 'mean',
+                        'AY': 'mean',
+                        'AZ': 'mean',
+               'DeMortonDay': 'first',
+                     'Side' : 'first',
+                  'Patient' : 'first',
+            'DeMortonLabel' : 'first'
+            }
+        g = df.groupby(["Patient", "Side"]) # groupby each sensor
+        df_ret = pd.DataFrame()
+        for gid, df_sub in g:
+            df = df_sub.resample(rule).agg(aggregations)
+            df_ret = df_ret.append(df)
+        # Move "timestamp", "Patient", "Side" back as columns.
+        df_ret = df_ret.reset_index()
+        # Strangely, g.resample(rule).agg(aggregations), which should give
+        # about the same result, is much much slower...
+    else: # enable=False
+        df_ret = df
+        df_ret = df_ret.reset_index()
+              
+    return df_ret
 
 
 
