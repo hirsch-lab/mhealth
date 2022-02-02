@@ -17,7 +17,7 @@ import context # it can oly import context.py when contained in the same folder 
 from demmi_ex_dict import demmi_ex                                                          
 from acceleration import put_margins_around_ex, resample, align_timestamp
 from fourier import fourier_transform           
-from feature_dev import feature_development
+from feature_dev import feature_development, get_patient_mass
 
 # Paths
 from paths import path_data
@@ -27,12 +27,13 @@ from paths import path_data
 #from src.mhealth.utils.context_info import dump_context
 from mhealth.utils.plotter_helper import save_figure, setup_plotting
 
-
-# LOAD DEMMI (acc) DATA ----------------------------------------------------------------------------
-
+# DEFINE PARAMETERS ----------------------------------------------------------------------------
+exercises = ['2a', '5a','12','15']
 load = 'subset' # load demorton_pat001_pat002_pat006.h5. 3 Pat: 001, 002, 006, left&right.
 # load = 'all'  # load demorton.h5 (all data)
 
+
+# LOAD DEMMI (acc) DATA ----------------------------------------------------------------------------
 if load == 'subset':
     filepath = '/Users/julien/GD/ACLS/TM/DATA/extracted/quality50_clipped_collected/store/demorton_pat001_pat002_pat006.h5'
     store = pd.HDFStore(filepath, mode='r')
@@ -63,7 +64,6 @@ del filepath
 
 # Put margins of 'delta_seconds'  before & after all specified exercises. [RangeIndex -> DateTimeIndex]
 input_df = acc
-exercises = ['2a', '5a','12','15']
 delta_seconds = 10
 df_margins = put_margins_around_ex(df=input_df, demmi_ex=exercises, delta_seconds=delta_seconds)
 
@@ -133,6 +133,20 @@ for ex in exercises:
     
 #     plt.show()
 
+# FEATURE DEVELOPMENT (scores) ----------------------------------------------------------------------------
+
+def generate_feature_scores(exercises):
+    """Generate features dataframe of all Exercises and Patients.
+    Save to csv.
+    """
+    scores_ALL_ex = pd.DataFrame()
+    for ex in exercises:
+        scores_per_Ex = feature_development(df=acc, ex=ex) # input is 'acc' (either subset or all)
+        scores_ALL_ex = scores_ALL_ex.append(scores_per_Ex)
+    scores_ALL_ex.to_csv('scores_ALL_ex.csv') # export as csv
+    
+# Execute    
+generate_feature_scores(exercises)
 
 
 

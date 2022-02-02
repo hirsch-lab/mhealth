@@ -16,13 +16,17 @@ iMove_Borg_JB = pd.read_csv(filepath)
 borg = iMove_Borg_JB[["patient_ID", "sex", "age", "weight", "BMI"]]
 borg.loc[:,'patient_ID'] = borg['patient_ID'].apply(str) # int -> str
 borg.loc[:,'patient_ID'] = borg['patient_ID'].str.rjust(3, "0") # add trailing zeros
+borg = borg.set_index('patient_ID')
 # borg.info()
 
 def get_patient_mass(patient_ID):
     """for specific patient_ID, return mass, ie weight."""
-    mask = borg.patient_ID==patient_ID # list(g.groups.keys())[0]  # eg patient_ID = "003"
-    print(mask)
-    mass = borg.loc[mask, "weight"]
+    # mask = borg.patient_ID==patient_ID # list(g.groups.keys())[0]  # eg patient_ID = "003"
+    # print(mask)
+    # mass = borg.loc[mask, "weight"]
+    # mass = borg.patient_ID.iloc[0]
+    mass = borg.loc[patient_ID, "weight"]
+    
     return mass
 
 # a ----------------------------------------------------------------------------
@@ -69,8 +73,11 @@ def feature_development(df, ex='12'):
 
             dt = 1 # 0.5 # Time step in seconds
             v0 = 0 #  assumption for velocity at time 0 
-            m = 60
-                              
+                            
+            # get mass of Patient_ID (normal col)
+            patient_ID = df.Patient.iloc[0] # Get 1st element of "003", "003", "003", "003", 
+            m = get_patient_mass(patient_ID)
+            
             ## Method 1: Per patient, day, exercise and side
             A = df["A"] 
             a_filt = A.resample(rule='1min').mean()
@@ -129,15 +136,33 @@ def feature_development(df, ex='12'):
     scores_kin   = score_kinetic_energy(df)
     scores_spect = score_spectrum(df)
     
-    # scores_all: DataFrame with MultiIndex: Patient, DeMortonDay, Side; and 2 cols: "Standard deviation" and "Characteristic MEAN frequency"
+    # scores_all: DataFrame with MultiIndex: Patient, DeMortonDay, Side.
     scores_all = pd.concat([ # concat all Series
                             scores_std, 
                             scores_kin,
                             scores_spect
                             ], axis=1)
+    
+    scores_all["Exercise"] = ex
+    scores_all = scores_all.set_index("Exercise", append=True) # extend MultiIndex with "Exercise"
+    
     return scores_all
     
     
 
+# # exercises = ['2a', '5a','12','15']
+# fd_2a = feature_development(df=acc, ex='2a')
+# fd_5a = feature_development(df=acc, ex='5a')
 
-a = feature_development(df=acc, ex='12')
+# fd_12 = feature_development(df=acc, ex='12')
+# fd_15 = feature_development(df=acc, ex='15')
+
+# scores_ALL_ex = pd.DataFrame()
+# scores_ALL_ex = scores_ALL_ex.append(fd_12)
+# scores_ALL_ex = scores_ALL_ex.append(fd_15)
+# scores_ALL_ex = scores_ALL_ex.append(fd_2a)
+# scores_ALL_ex = scores_ALL_ex.append(fd_5a)
+
+# df = acc
+# mask = df.DeMortonLabel.eq('12')
+# df = df[mask]
