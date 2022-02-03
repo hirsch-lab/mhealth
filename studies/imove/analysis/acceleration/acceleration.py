@@ -3,12 +3,8 @@ import pandas as pd
 import numpy as np
 from datetime import timedelta
 
-# Import Own modules
-import context # it can oly import context.py when contained in the same folder as demmi.py
+# Import own modules
 from demmi_ex_dict import demmi_ex
-
-# Modules by Susanne Suter
-from mhealth.utils.plotter_helper import save_figure, setup_plotting
 
 #### Margins around exercices ----------------------------------------------------------------------------
 

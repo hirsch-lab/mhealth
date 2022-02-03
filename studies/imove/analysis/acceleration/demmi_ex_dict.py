@@ -1,11 +1,3 @@
-from pathlib import Path
-import pandas as pd
-
-# Working directory (angegeben in upper right) must be located in
-# /imove/analysis/acceleration, sonst geht import context.py nicht!
-import context
-from context import *
-
 # Lookup: Exercise id -> Description
 demmi_ex = {
     "temp":"Messen der Körpertemperatur mit Ohrmessgerät",

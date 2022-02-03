@@ -10,28 +10,20 @@ from scipy.fft import rfft, rfftfreq
 from acceleration import resample, align_timestamp
 from paths import path_data
 
-# LOAD iMove_Borg_JB.csv 
-filepath = Path(path_data,'Borg/iMove_Borg_JB.csv')
-iMove_Borg_JB = pd.read_csv(filepath)
-borg = iMove_Borg_JB[["patient_ID", "sex", "age", "weight", "BMI"]]
-borg.loc[:,'patient_ID'] = borg['patient_ID'].apply(str) # int -> str
-borg.loc[:,'patient_ID'] = borg['patient_ID'].str.rjust(3, "0") # add trailing zeros
-borg = borg.set_index('patient_ID')
-# borg.info()
 
-def get_patient_mass(patient_ID):
+def get_patient_mass(lookup, patient_ID):
     """for specific patient_ID, return mass, ie weight."""
+    return lookup.loc[patient_ID, "weight"]
 
-    mass = borg.loc[patient_ID, "weight"]
-    return mass
 
-def get_patient_bmi(patient_ID):
+def get_patient_bmi(lookup, patient_ID):
     """for specific patient_ID, return bmi."""
-    bmi = borg.loc[patient_ID, "bmi"]
-    return bmi
+    return lookup.loc[patient_ID, "BMI"]
 
-def get_patient_borg_exertion(patient_ID, day):
+
+def get_patient_borg_exertion(df_borg, patient_ID, day):
     """for specific patient_ID, day, return exertion."""
+    exertion = df_borg.copy()  # Don't modify the original file.
     exertion = pd.read_csv(Path(path_data, 'Borg/exertion.csv') ) # load exertion.csv which was created in R
     exertion.loc[:,'patient_ID'] = exertion.patient_ID.apply(str) # int -> str
     exertion.loc[:,'patient_ID'] = exertion['patient_ID'].str.rjust(3, "0") # add trailing zer
@@ -42,12 +34,11 @@ def get_patient_borg_exertion(patient_ID, day):
 
 
 # a ----------------------------------------------------------------------------
-def feature_development(df, ex='12'):
+def feature_development(df, df_borg, ex='12'):
     """Index of df: RangeIndex
     """
     # subset input df (without margins) for specific ex 
-    mask = df.DeMortonLabel.eq(ex)
-    df = df[mask]
+    df = df[df.DeMortonLabel == ex]
         
     # 1)
     def score_std(df):
@@ -67,28 +58,29 @@ def feature_development(df, ex='12'):
         
         return scores_std
 
-    # # 2)
-    # def score_bmi(df):
-    #     """input df is groupby object g. Return bmi of Patient per group."""
-    #     df = align_timestamp(df=df, grouping=['Patient', 'DeMortonDay', 'Side'])
+    # 2)
+    def score_bmi(df):
+        """input df is groupby object g. Return bmi of Patient per group."""
+        df = align_timestamp(df=df, grouping=['Patient', 'DeMortonDay', 'Side'])
 
-    #     def transform(df): 
-    #         """to be applied on each subgroup. Calculate Standard deviation of A."""
-    #         patient_ID = df.Patient.iloc[0] # Get 1st element of "003", "003", "003", "003",
-    #         bmi = get_patient_bmi(patient_ID)
-    #         return bmi # GIBT KEY ERROR.... 
+        def transform(df):
+            """to be applied on each subgroup. Calculate Standard deviation of A."""
+            assert df.Patient.nunique() == 1
+            patient_ID = df.Patient.iloc[0]  # Take first element
+            bmi = get_patient_bmi(df_borg, patient_ID)
+            return bmi
 
-    #     # groupby Patient, Side, DeMortonDay                                                                                                                   
-    #     g = df.groupby(["Patient", "DeMortonDay", "Side"])
+        # groupby Patient, Side, DeMortonDay
+        g = df.groupby(["Patient", "DeMortonDay", "Side"])
         
-    #     scores_bmi = g.apply(transform)
-    #     scores_bmi.name = "BMI"
+        scores_bmi = g.apply(transform)
+        scores_bmi.name = "BMI"
         
-    #     return scores_bmi
+        return scores_bmi
 
 
     # 3)
-    def score_kinetic_energy(df, method='1'): # method 2 fuses Sensors 'left' and 'right'
+    def score_kinetic_energy(df, lookup, method='1'): # method 2 fuses Sensors 'left' and 'right'
         """input df is groupby object g. 
         Compute kinetic energy given acceleration and mass"""
         
@@ -187,7 +179,7 @@ def feature_development(df, ex='12'):
         return scores_kin
 
     # 5)
-    def score_borg_exertion(df):
+    def score_borg_exertion(df, df_borg):
         """input df is groupby object g. Compute borg_exertion of Pat."""
         df = align_timestamp(df=df, grouping=['Patient', 'DeMortonDay', 'Side'])
 
@@ -195,7 +187,7 @@ def feature_development(df, ex='12'):
             """to be applied on each subgroup."""
             patient_ID = df.Patient.iloc[0] # Get 1st element of "003", "003", "003", "003",
             day = df.DeMortonDay.iloc[0] # Get 1st element of 2, 2, 2,
-            score_exertion = get_patient_borg_exertion(patient_ID, day) # LUT
+            score_exertion = get_patient_borg_exertion(df_borg, patient_ID, day) # LUT
             return score_exertion # 
 
         # groupby Patient, Side, DeMortonDay                                                                                                                   
@@ -211,7 +203,7 @@ def feature_development(df, ex='12'):
 
     ## Execute all inner functions
     scores_std   = score_std(df)
-    # scores_bmi    = score_bmi(df)
+    scores_bmi   = score_bmi(df)
     scores_kin   = score_kinetic_energy(df)
     scores_spect = score_spectrum(df)
     scores_exertion = score_borg_exertion(df)
