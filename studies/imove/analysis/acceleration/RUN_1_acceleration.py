@@ -1,6 +1,6 @@
 """RUN_acceleration """
 # Working directory (angegeben in upper right) must be located in
-# /imove/analysis/acceleration, sost geht import context.py nicht!     
+# /imove/analysis/acceleration, sost geht import context.py nicht!
 
 # LIBRARIES ----------------------------------------------------------------------------
 import os
@@ -127,13 +127,13 @@ def plot_exercises_per_day(df, exercises, days):
         plt.tight_layout()
 
 
-def generate_feature_scores(df, exercises):
+def generate_feature_scores(df, df_borg, exercises):
     """Generate features dataframe of all Exercises and Patients.
     Save to csv.
     """
     scores_ALL_ex = pd.DataFrame()
     for ex in exercises:
-        scores_per_Ex = feature_development(df=df, ex=ex)
+        scores_per_Ex = feature_development(df=df, df_borg=df_borg, ex=ex)
         scores_ALL_ex = scores_ALL_ex.append(scores_per_Ex)
     scores_ALL_ex.to_csv('scores_ALL_ex.csv') # export as csv
 
@@ -153,15 +153,15 @@ def main():
     #                                     pat=pat, day=day, side=side)
     # plt.show()
 
-    plot_exercises(df=df, exercises=EXERCISES)
-    plt.show()
+    # plot_exercises(df=df, exercises=EXERCISES)
+    # plt.show()
 
     # days = ['1', '2', '3']
     # plot_exercises_per_day(df=df, exercises=EXERCISES, days=days)
     # plt.show()
 
-    # generate_feature_scores(df=df_raw, df_borg=df_borg,
-    #                         exercises=EXERCISES)
+    generate_feature_scores(df=df_raw, df_borg=df_borg,
+                            exercises=EXERCISES)
 
 
 if __name__ == "__main__":
