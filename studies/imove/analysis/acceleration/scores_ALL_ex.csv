@@ -1,4 +1,4 @@
-Patient,DeMortonDay,Side,Exercise,Standard deviation,Kinetic energy,Kinetic energy,Exertion
+Patient,DeMortonDay,Side,Exercise,Standard deviation,Kinetic energy,Max. Frequency,Exertion
 001,2,left,2a,1.4988049268722534,5299732.0,6.744910179640718,2.0
 001,2,right,2a,1.5809364318847656,5435804.0,7.358083832335329,2.0
 001,3,left,2a,1.9206198453903198,5878363.0,7.926359832635983,1.0

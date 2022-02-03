@@ -18,8 +18,17 @@ from RUN_1_acceleration import exercises
 #### a ----------------------------------------------------------------------------
 # Load scores_ALL_ex
 scores_ALL_ex = pd.read_csv('scores_ALL_ex.csv')  
-scores_ALL_ex = scores_ALL_ex.set_index(["Exercise", "Patient"])
+counts = scores_ALL_ex.groupby(["Exercise", "Patient"])["Exertion"].count()
+df = scores_ALL_ex.groupby(["Exercise", "Patient"]).mean()
+df["counts"] = counts # Aggregated by counts (eg 4 obs) per group.
 
-#### a ----------------------------------------------------------------------------
+df = df.reset_index() # ev nötig damit pairplot geht.. Muss hue-variable factor sein?
+df.info()
 
 
+#### Correlation ----------------------------------------------------------------------------
+
+import seaborn as sns
+sns.set_theme(style="ticks")
+sns.pairplot(df, hue="Exercise")
+sns.pairplot(df, hue="Patient")

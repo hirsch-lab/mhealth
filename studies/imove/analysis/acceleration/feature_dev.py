@@ -183,7 +183,7 @@ def feature_development(df, ex='12'):
         g = df.groupby(["Patient", "DeMortonDay", "Side"])
     
         scores_kin = g.apply(transform)
-        scores_kin.name = "Kinetic energy"
+        scores_kin.name = "Max. Frequency"
         return scores_kin
 
     # 5)
@@ -211,17 +211,17 @@ def feature_development(df, ex='12'):
 
     ## Execute all inner functions
     scores_std   = score_std(df)
+    # scores_bmi    = score_bmi(df)
     scores_kin   = score_kinetic_energy(df)
     scores_spect = score_spectrum(df)
-    # scores_bmi    = score_bmi(df)
     scores_exertion = score_borg_exertion(df)
     
     # scores_all: DataFrame with MultiIndex: Patient, DeMortonDay, Side.
     scores_all = pd.concat([ # concat all Series
                             scores_std, 
+                            # scores_bmi,
                             scores_kin,
                             scores_spect,
-                            # scores_bmi,
                             scores_exertion
                             ], axis=1)
     
