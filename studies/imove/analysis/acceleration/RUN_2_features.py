@@ -32,3 +32,4 @@ import seaborn as sns
 sns.set_theme(style="ticks")
 sns.pairplot(df, hue="Exercise")
 sns.pairplot(df, hue="Patient")
+

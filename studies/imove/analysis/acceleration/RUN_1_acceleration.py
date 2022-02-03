@@ -135,7 +135,7 @@ for ex in exercises:
 
 # FEATURE DEVELOPMENT (scores) ----------------------------------------------------------------------------
 
-def generate_feature_scores(exercises):
+def generate_feature_scores(exercises): 
     """Generate features dataframe of all Exercises and Patients.
     Save to csv.
     """
