@@ -55,6 +55,7 @@ exertion = prep %>%
           select(-(trash)) %>%
           mutate_if(is.character, as.factor) # day: chr --> fct 
 head(exertion)
+write_csv(exertion, paste0(data_path, 'exertion.csv') ) # save to csv
 
 # exertion_D23 (only D2, D3)
 exertion_D23 = exertion %>%

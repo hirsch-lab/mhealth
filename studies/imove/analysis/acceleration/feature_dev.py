@@ -21,13 +21,25 @@ borg = borg.set_index('patient_ID')
 
 def get_patient_mass(patient_ID):
     """for specific patient_ID, return mass, ie weight."""
-    # mask = borg.patient_ID==patient_ID # list(g.groups.keys())[0]  # eg patient_ID = "003"
-    # print(mask)
-    # mass = borg.loc[mask, "weight"]
-    # mass = borg.patient_ID.iloc[0]
+
     mass = borg.loc[patient_ID, "weight"]
-    
     return mass
+
+def get_patient_bmi(patient_ID):
+    """for specific patient_ID, return bmi."""
+    bmi = borg.loc[patient_ID, "bmi"]
+    return bmi
+
+def get_patient_borg_exertion(patient_ID, day):
+    """for specific patient_ID, day, return exertion."""
+    exertion = pd.read_csv(Path(path_data, 'Borg/exertion.csv') ) # load exertion.csv which was created in R
+    exertion.loc[:,'patient_ID'] = exertion.patient_ID.apply(str) # int -> str
+    exertion.loc[:,'patient_ID'] = exertion['patient_ID'].str.rjust(3, "0") # add trailing zer
+    exertion['day'] = exertion['day'].map(lambda x: x.lstrip('D')) # D1 --> 1
+    exertion = exertion.set_index(['patient_ID', 'day'])
+    exertion_value = exertion.loc[(patient_ID, day), "exertion"] # extract exertion value 
+    return exertion_value
+
 
 # a ----------------------------------------------------------------------------
 def feature_development(df, ex='12'):
@@ -55,9 +67,28 @@ def feature_development(df, ex='12'):
         
         return scores_std
 
-    
-    # 2)
-    def score_kinetic_energy(df):
+    # # 2)
+    # def score_bmi(df):
+    #     """input df is groupby object g. Return bmi of Patient per group."""
+    #     df = align_timestamp(df=df, grouping=['Patient', 'DeMortonDay', 'Side'])
+
+    #     def transform(df): 
+    #         """to be applied on each subgroup. Calculate Standard deviation of A."""
+    #         patient_ID = df.Patient.iloc[0] # Get 1st element of "003", "003", "003", "003",
+    #         bmi = get_patient_bmi(patient_ID)
+    #         return bmi # GIBT KEY ERROR.... 
+
+    #     # groupby Patient, Side, DeMortonDay                                                                                                                   
+    #     g = df.groupby(["Patient", "DeMortonDay", "Side"])
+        
+    #     scores_bmi = g.apply(transform)
+    #     scores_bmi.name = "BMI"
+        
+    #     return scores_bmi
+
+
+    # 3)
+    def score_kinetic_energy(df, method='1'): # method 2 fuses Sensors 'left' and 'right'
         """input df is groupby object g. 
         Compute kinetic energy given acceleration and mass"""
         
@@ -79,23 +110,48 @@ def feature_development(df, ex='12'):
             m = get_patient_mass(patient_ID)
             
             ## Method 1: Per patient, day, exercise and side
-            A = df["A"] 
-            a_filt = A.resample(rule='1min').mean()
-            v_filt = a_filt.cumsum()*dt + v0 # cumsum() beginnt bei 0 implizit
-            E_kin = m*v_filt**2
-            E_kin_total = E_kin.sum() # warum aufsummieren?
+            if method=='1':
+                A = df["A"] 
+                A_filt = A.resample(rule='1min').mean() # Ist das korrekt?
+            
+            ## Method 2: Per patient, day, exercise. But NOT per side.
+            elif method=='2':
+                A_left  = df.loc[df["Side"]=="left" , "A"]
+                A_right = df.loc[df["Side"]=="right", "A"] 
+                A_left  =  A_left.resample(rule='1min').mean() # früher: A_left.rolling(window=f"{dt}s")
+                A_right = A_right.resample(rule='1min').mean()  
+                A_filt = 0.5*(A_left+A_right)  # Average acceleration measured at "center of body"
+                print(A_filt)
+            
+            else:
+                print("There is an error with the method")
+                pass
+            
+            v_filt = A_filt.cumsum()*dt + v0 # cumsum() beginnt bei 0 implizit
+            E_kin  = m*v_filt**2 # variable m inputed
+            E_kin_total = E_kin.sum() # aufsummieren
             
             return E_kin_total
         
-        # groupby Patient, Side, DeMortonDay                                                                                                                   
-        g = df.groupby(["Patient", "DeMortonDay", "Side"])
-
+        ## GROUPBY
+        if method=='1': # groupby: Patient, DeMortonDay, Side
+            groupby = ["Patient", "DeMortonDay", "Side"]                                                                                                                 
+        
+        elif method=='2':
+            # groupby: Patient, DeMortonDay. But NOT per Side.
+            groupby = ["Patient", "DeMortonDay"]   
+                        
+        else:
+            print("There is an error with the method")
+            pass
+        
+        g = df.groupby(groupby)
         scores_kin = g.apply(transform)
         scores_kin.name = "Kinetic energy"
         return scores_kin
 
 
-    # 3)
+    # 4)
     def score_spectrum(df):
         """Compute FFT of A. 
         Output: Mean frequency, ie (xf * yf_norm).mean() """
@@ -130,17 +186,43 @@ def feature_development(df, ex='12'):
         scores_kin.name = "Kinetic energy"
         return scores_kin
 
+    # 5)
+    def score_borg_exertion(df):
+        """input df is groupby object g. Compute borg_exertion of Pat."""
+        df = align_timestamp(df=df, grouping=['Patient', 'DeMortonDay', 'Side'])
+
+        def transform(df): 
+            """to be applied on each subgroup."""
+            patient_ID = df.Patient.iloc[0] # Get 1st element of "003", "003", "003", "003",
+            day = df.DeMortonDay.iloc[0] # Get 1st element of 2, 2, 2,
+            score_exertion = get_patient_borg_exertion(patient_ID, day) # LUT
+            return score_exertion # 
+
+        # groupby Patient, Side, DeMortonDay                                                                                                                   
+        g = df.groupby(["Patient", "DeMortonDay", "Side"])
+        
+        scores_exertion = g.apply(transform)
+        scores_exertion.name = "Exertion"
+        
+        return scores_exertion
+
+
+
 
     ## Execute all inner functions
     scores_std   = score_std(df)
     scores_kin   = score_kinetic_energy(df)
     scores_spect = score_spectrum(df)
+    # scores_bmi    = score_bmi(df)
+    scores_exertion = score_borg_exertion(df)
     
     # scores_all: DataFrame with MultiIndex: Patient, DeMortonDay, Side.
     scores_all = pd.concat([ # concat all Series
                             scores_std, 
                             scores_kin,
-                            scores_spect
+                            scores_spect,
+                            # scores_bmi,
+                            scores_exertion
                             ], axis=1)
     
     scores_all["Exercise"] = ex
