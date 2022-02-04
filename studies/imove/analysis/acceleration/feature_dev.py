@@ -34,7 +34,7 @@ def get_patient_borg_exertion(patient_ID, day):
 
 
 # a ----------------------------------------------------------------------------
-def feature_development(df, df_borg, ex='12'):
+def feature_development(df, df_borg, ex='12'): # df und df_borg are passed to sub-functions.
     """Index of df: RangeIndex
     """
     # subset input df (without margins) for specific ex
@@ -63,7 +63,7 @@ def feature_development(df, df_borg, ex='12'):
         """input df is groupby object g. Return bmi of Patient per group."""
         df = align_timestamp(df=df, grouping=['Patient', 'DeMortonDay', 'Side'])
 
-        def transform(df, lookup):
+        def transform(df, lookup): # lookup=df_borg
             """to be applied on each subgroup. Calculate Standard deviation of A."""
             assert df.Patient.nunique() == 1
             patient_ID = df.Patient.iloc[0]  # Take first element
@@ -113,7 +113,7 @@ def feature_development(df, df_borg, ex='12'):
                 A_right = df.loc[df["Side"]=="right", "A"]
                 A_left  = A_left.resample(rule=rule).mean()
                 A_right = A_right.resample(rule=rule).mean()
-                A_filt = 0.5*(A_left+A_right)
+                A_filt  = 0.5*(A_left+A_right)
 
             else:
                 print("There is an error with the method")
@@ -128,7 +128,7 @@ def feature_development(df, df_borg, ex='12'):
             #   Or: estimate the "horizontal" acceleration (normal to the
             #   estimated direction of gravitation.
             #   However: It's a bit tricky to do this.
-            A_filt -= A_filt.median()
+            A_filt -= A_filt.median() # subtract median from each value
 
             v_filt = A_filt.cumsum()*dt + v0 # cumsum() beginnt bei 0 implizit
             E_kin  = m*v_filt**2 # variable m inputed
@@ -146,8 +146,8 @@ def feature_development(df, df_borg, ex='12'):
             groupby = ["Patient", "DeMortonDay"]
             g = df.groupby(groupby)
             scores_kin = g.apply(transform, lookup=lookup)
-            scores_kin = pd.concat([scores_kin, scores_kin],
-                                   keys=["left", "right"], axis=0)
+            scores_kin = pd.concat([scores_kin, scores_kin],  # verstehe logik nicht
+                                   keys=["left", "right"], axis=0) # concat on top of each other
             scores_kin.index.set_names("Side", level=0, inplace=True)
             scores_kin = scores_kin.reorder_levels([1,2,0])
         else:
@@ -217,7 +217,7 @@ def feature_development(df, df_borg, ex='12'):
     ## Execute all inner functions
     scores_std   = score_std(df)
     scores_bmi   = score_bmi(df, lookup=df_borg)
-    scores_kin   = score_kinetic_energy(df, lookup=df_borg)
+    scores_kin   = score_kinetic_energy(df, lookup=df_borg, method='2') # methdod 2 fuses left and right sensors
     scores_spect = score_spectrum(df)
     #scores_exertion = score_borg_exertion(df)
 

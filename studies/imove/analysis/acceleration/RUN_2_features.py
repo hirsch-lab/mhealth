@@ -13,12 +13,12 @@ import context # it can oly import context.py when contained in the same folder 
 from demmi_ex_dict import demmi_ex
 from acceleration import put_margins_around_ex, resample, align_timestamp
 from feature_dev import feature_development
-from RUN_1_acceleration import exercises
+from RUN_1_acceleration import EXERCISES
 
 #### a ----------------------------------------------------------------------------
 # Load scores_ALL_ex
 scores_ALL_ex = pd.read_csv('scores_ALL_ex.csv')  
-counts = scores_ALL_ex.groupby(["Exercise", "Patient"])["Exertion"].count()
+counts = scores_ALL_ex.groupby(["Exercise", "Patient"])["BMI"].count() # enthält keine col 'Exertion'
 df = scores_ALL_ex.groupby(["Exercise", "Patient"]).mean()
 df["counts"] = counts # Aggregated by counts (eg 4 obs) per group.
 
