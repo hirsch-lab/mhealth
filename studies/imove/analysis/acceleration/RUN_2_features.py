@@ -27,9 +27,12 @@ df.info()
 
 
 #### Correlation ----------------------------------------------------------------------------
+df = df.drop('counts', 1) # drop col counts
 
 import seaborn as sns
 sns.set_theme(style="ticks")
 sns.pairplot(df, hue="Exercise")
 sns.pairplot(df, hue="Patient")
+
+
 
