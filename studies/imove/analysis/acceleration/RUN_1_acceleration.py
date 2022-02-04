@@ -20,13 +20,14 @@ from feature_dev import feature_development
 
 
 # DEFINE PARAMETERS ----------------------------------------------------------------------------
+# Variablen mit globalem Scope sind in CAPITAL
 EXERCISES = ['2a', '5a','12','15'] 
 LOAD = 'subset' # load demorton_pat001_pat002_pat006.h5. 3 Pat: 001, 002, 006, left&right.
 # LOAD = 'all'  # load demorton.h5 (all data)
 
 MARGIN_SECONDS = 10     # Margins per exercise in seconds
 ENABLE_RESAMPLE = True  # Enable resampling (from 51HZ to 1Hz)
-METHOD = 'fuse' # Alternative: 'no_fuse'. 'fuse' fuses sensors 'left' and 'right' when calling score_kinetic_energy()
+# METHOD = '2' (fuse) is active # 'fuse' fuses sensors 'left' and 'right' when calling score_kinetic_energy()
 
 
 PATH_DATA = Path('/Users/julien/GD/ACLS/TM/DATA/') # Julien
@@ -84,6 +85,7 @@ def plot_amplitude_spectra_per_exercise(df, exercises, pat, day, side):
     for ex in exercises:
         xf, yf = fourier_transform(df=df, ex=ex, pat=pat, day=day, side=side)
         ex_text = demmi_ex[ex]
+        plt.figure() # nötig, damit für jede Ex eine plot generiert wird. (falls es welche Problem gibt, ev hier outcommenten.)
         plt.plot(xf, np.abs(yf))
         title = (f'FFT for Patient {pat}, Day {day}, Side {side} \n'
                  f'Ex {ex}: {ex_text} \n resample={ENABLE_RESAMPLE}')

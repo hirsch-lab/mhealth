@@ -80,7 +80,7 @@ def feature_development(df, df_borg, ex='12'): # df und df_borg are passed to su
 
 
     # 3)
-    def score_kinetic_energy(df, lookup, method='1'): # method 2 fuses Sensors 'left' and 'right'
+    def score_kinetic_energy(df, lookup, method='2'): # method 2 fuses Sensors 'left' and 'right'
         """input df is groupby object g.
         Compute kinetic energy given acceleration and mass"""
 
@@ -217,7 +217,7 @@ def feature_development(df, df_borg, ex='12'): # df und df_borg are passed to su
     ## Execute all inner functions
     scores_std   = score_std(df)
     scores_bmi   = score_bmi(df, lookup=df_borg)
-    scores_kin   = score_kinetic_energy(df, lookup=df_borg, method='2') # methdod 2 fuses left and right sensors
+    scores_kin   = score_kinetic_energy(df, lookup=df_borg, method='2') # method 2 fuses left and right sensors
     scores_spect = score_spectrum(df)
     #scores_exertion = score_borg_exertion(df)
 
