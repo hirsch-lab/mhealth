@@ -23,7 +23,7 @@ def get_patient_bmi(lookup, patient_ID):
 
 def get_patient_borg_exertion(patient_ID, day):
     """for specific patient_ID, day, return exertion."""
-    exertion = df_borg.copy()  # Don't modify the original file.
+    # exertion = df_borg.copy()  # Don't modify the original file.
     exertion = pd.read_csv(Path(path_data, 'Borg/exertion.csv') ) # load exertion.csv which was created in R
     exertion.loc[:,'patient_ID'] = exertion.patient_ID.apply(str) # int -> str
     exertion.loc[:,'patient_ID'] = exertion['patient_ID'].str.rjust(3, "0") # add trailing zer
@@ -194,21 +194,21 @@ def feature_development(df, df_borg, ex='12'): # df und df_borg are passed to su
         return scores_kin
 
     # 5)
-    def score_borg_exertion(df, df_borg):
+    def score_borg_exertion(df):
         """input df is groupby object g. Compute borg_exertion of Pat."""
-        df = align_timestamp(df=df, grouping=['Patient', 'DeMortonDay', 'Side'])
+        df = align_timestamp(df=df, grouping=['Patient', 'DeMortonDay', 'Side']) # grouping nach Side macht eig. keinen Sinn
 
-        def transform(df, lookup):
+        def transform(df):
             """to be applied on each subgroup."""
             patient_ID = df.Patient.iloc[0] # Get 1st element of "003", "003", "003", "003",
             day = df.DeMortonDay.iloc[0] # Get 1st element of 2, 2, 2,
-            score_exertion = get_patient_borg_exertion(df_borg, patient_ID, day) # LUT
+            score_exertion = get_patient_borg_exertion(patient_ID, day) # LUT
             return score_exertion #
 
         # groupby Patient, Side, DeMortonDay
         g = df.groupby(["Patient", "DeMortonDay", "Side"])
 
-        scores_exertion = g.apply(transform, lookup=df_borg)
+        scores_exertion = g.apply(transform)
         scores_exertion.name = "Exertion"
 
         return scores_exertion
@@ -219,7 +219,7 @@ def feature_development(df, df_borg, ex='12'): # df und df_borg are passed to su
     scores_bmi   = score_bmi(df, lookup=df_borg)
     scores_kin   = score_kinetic_energy(df, lookup=df_borg, method='2') # method 2 fuses left and right sensors
     scores_spect = score_spectrum(df)
-    #scores_exertion = score_borg_exertion(df)
+    scores_exertion = score_borg_exertion(df) # exertion.csv is loaded within the function.
 
     # scores_all: DataFrame with MultiIndex: Patient, DeMortonDay, Side.
     scores_all = pd.concat([ # concat all Series
@@ -227,7 +227,7 @@ def feature_development(df, df_borg, ex='12'): # df und df_borg are passed to su
                             scores_bmi,
                             scores_kin,
                             scores_spect,
-                            #scores_exertion
+                            scores_exertion
                             ], axis=1)
 
     scores_all["Exercise"] = ex
