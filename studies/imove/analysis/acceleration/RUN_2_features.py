@@ -10,22 +10,27 @@ from datetime import timedelta
 
 # Import Own modules
 import context # it can oly import context.py when contained in the same folder as demmi.py
-from demmi_ex_dict import demmi_ex
+from demmi_ex_dict import demmi_ex, demmi_ex_short
 from acceleration import put_margins_around_ex, resample, align_timestamp
 from feature_dev import feature_development
 from RUN_1_acceleration import EXERCISES
 from paths import path_output
 
-#### a ----------------------------------------------------------------------------
+#### LOAD DATA (make sure to load correct csv) ----------------------------------------------------------------------------
 # Load scores_ALL_ex
-scores_ALL_ex = pd.read_csv('scores_ALL_ex.csv')  
+# scores_ALL_ex = pd.read_csv('scores_ALL_ex.csv')  
+# scores_ALL_ex = pd.read_csv('scores_ALL_ex_subset.csv')  
+# Load scores_ALL_ex
+scores_ALL_ex = pd.read_csv('scores_ALL_ex_60pat.csv')  
 counts = scores_ALL_ex.groupby(["Exercise", "Patient"])["BMI"].count() # enthält keine col 'Exertion'
 df = scores_ALL_ex.groupby(["Exercise", "Patient"]).mean()
+df = df.drop('DeMortonDay', 1) # drop col DeMortonDay, bc makes no sense
 df["counts"] = counts # Shows how many counts were aggregated to calculate mean for each group (eg 4 obs).
-
 df = df.reset_index() # ev nötig damit pairplot geht.. Muss hue-variable factor sein?
-# df.info()
-
+df.rename(columns={'Exercise':'Exercise_number'}, inplace=True)
+df['Exercise'] = df['Exercise_number'].map(demmi_ex_short)
+df['Patient'] = df['Patient'].astype(str)
+df.info()
 
 #### Correlation ----------------------------------------------------------------------------
 df = df.drop('counts', 1) # drop col counts
@@ -42,6 +47,10 @@ plt.savefig(path_save)
 sns.pairplot(df, hue="Patient")
 path_save = Path(path_output, 'plots/corr_features/corr_features_HUE_patient.png')
 plt.savefig(path_save)
+
+
+#### ANALYSIS CONTINUES IN JUPYTERLAB WITH FILE: feature_correlation.py ----------------------------------------------------------------------------
+
 
 
 

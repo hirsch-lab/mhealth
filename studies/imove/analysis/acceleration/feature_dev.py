@@ -54,7 +54,7 @@ def feature_development(df, df_borg, ex='12'): # df und df_borg are passed to su
         g = df.groupby(["Patient", "DeMortonDay", "Side"])
 
         scores_std = g.apply(transform)
-        scores_std.name = "Standard deviation"
+        scores_std.name = "Std Dev of A"
 
         return scores_std
 

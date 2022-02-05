@@ -26,3 +26,27 @@ demmi_ex = {
 #im Bewegungsprotokoll gemacht hat und dieses Zeitintervall «stornieren möchte» wir 
 #haben das gemacht, weil es mit der Software nicht möglich war eine einmal bereits 
 #erfasste Zeitrunde zu löschen.
+
+
+demmi_ex_short = {
+    "temp":"Messen der Körpertemperatur mit Ohrmessgerät",
+    "1":"1: Gesäss von Bett heben",
+    "2a":"2a: Drehen auf R-Seite",
+    "2b":"2b: Zurück drehen",
+    "2c":"2c: Drehen auf L-Seite",
+    "2d":"2d: Zurück drehen",
+    "3a":"3a: An Bettrand setzen",
+    "4":"Bleiben Sie auf dem Stuhl sitzen ohne mit dem Rücken bzw. den Armen anzulehnen. (Wenn möglich bis 30 Sek.)",
+    "5a":"5a: Aufstehen v Stuhl",
+    "5b":"Bitte setzten Sie sich wieder hin.",
+    "6":"Kreuzen Sie ihre Arme vor der Brust und stehen ohne die Unterstützung Ihrer Arme auf. ",
+    "7":"Bleiben Sie ohne Unterstützung 10s stehen",
+    "8":"8: 10s stehen",
+    "9":"10s auf Zehenspitzen stehen",
+    "10":"Bitte stehen sie im Tandemstand (ein Fuss direkt vor dem anderen) 10s lang. ",
+    "11":"Wegstrecke mit oder ohne Hilfsmittel (Hilfsmittel kennzeichnen)",
+    "12":"12: Gehen",
+    "13":"13: Stift aufheben",
+    "14":"14: 4 Schritte rückwärts",
+    "15":"15: Springen an Ort"
+}

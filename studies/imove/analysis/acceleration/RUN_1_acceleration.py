@@ -22,8 +22,8 @@ from feature_dev import feature_development
 # DEFINE PARAMETERS ----------------------------------------------------------------------------
 # Variablen mit globalem Scope sind in CAPITAL
 EXERCISES = ['2a', '5a','12','15'] 
-LOAD = 'subset' # load demorton_pat001_pat002_pat006.h5. 3 Pat: 001, 002, 006, left&right.
-# LOAD = 'all'  # load demorton.h5 (all data)
+# LOAD = 'subset' # load demorton_pat001_pat002_pat006.h5. 3 Pat: 001, 002, 006, left&right.
+LOAD = 'all'  # load demorton.h5 (all data)
 
 MARGIN_SECONDS = 10     # Margins per exercise in seconds
 ENABLE_RESAMPLE = True  # Enable resampling (from 51HZ to 1Hz)
