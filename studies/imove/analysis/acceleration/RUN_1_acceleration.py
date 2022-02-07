@@ -1,4 +1,6 @@
-"""RUN_acceleration """
+"""RUN_acceleration: Generate_feature_scores() and save as scores_disagg.csv,
+which is contains all 60 Pat (L0AD='all' is assumed) and is in long format with variables: 
+    Patient, Exercise, DeMortonDay, Side """
 # Working directory (angegeben in upper right) must be located in
 # /imove/analysis/acceleration, sost geht import context.py nicht!
 
@@ -144,7 +146,7 @@ def generate_feature_scores(df, df_borg, exercises): # input df: df_raw
     for ex in exercises:
         scores_per_Ex = feature_development(df=df, df_borg=df_borg, ex=ex) # input df: df_raw
         scores_ALL_ex = scores_ALL_ex.append(scores_per_Ex)
-    scores_ALL_ex.to_csv('scores_ALL_ex.csv') # export as csv
+    scores_ALL_ex.to_csv('scores_disagg.csv') # export as csv . load='all': all 60 patients
 
 
 def main():
