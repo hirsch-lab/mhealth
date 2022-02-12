@@ -134,9 +134,13 @@ def feature_development(df, df_borg, ex='12'): # df und df_borg are passed to su
             E_kin  = m*v_filt**2 # variable m inputed
             E_kin_total = E_kin.sum() # aufsummieren
 
-            return E_kin_total
+            duration = (df.index.max() - df.index.min()) /6  #.total_seconds()  # dt = 
+            power = E_kin_total / duration
 
-        ## GROUPBY
+            return power
+            # return E_kin_total
+
+        ## GROUPBY   
         if method=='1': # groupby: Patient, DeMortonDay, Side
             groupby = ["Patient", "DeMortonDay", "Side"]
             g = df.groupby(groupby)

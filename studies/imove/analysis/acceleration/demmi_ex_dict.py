@@ -19,7 +19,7 @@ demmi_ex = {
     "12":"Bitte gehen Sie 50m [oder so weit wie für Sie möglich ist.]",
     "13":"Bitte heben Sie den Stift vom Boden auf. (Stift ca. 2m vom Patient entfernt auf den Boden legen)",
     "14":"Bitte gehen sie 4 Schritte rückwärts.",
-    "15":"Bitte springen Sie an Ort"
+    "15":"Bitte springen Sie an Ort" # mehrfach springen
 }
 
 # Norman: Default bedeutet, dass entweder der Untersucher oder der Patient einen Fehler 

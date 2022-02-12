@@ -24,10 +24,11 @@ from feature_dev import feature_development
 # DEFINE PARAMETERS ----------------------------------------------------------------------------
 # Variablen mit globalem Scope sind in CAPITAL
 EXERCISES = ['2a', '5a','12','15'] 
+# EXERCISES = ['2a', '5a', '8', '12','14', '15'] 
 # LOAD = 'subset' # load demorton_pat001_pat002_pat006.h5. 3 Pat: 001, 002, 006, left&right.
 LOAD = 'all'  # load demorton.h5 (all data)
 
-MARGIN_SECONDS = 10     # Margins per exercise in seconds
+MARGIN_SECONDS = 2   # Margins per exercise in seconds
 ENABLE_RESAMPLE = True  # Enable resampling (from 51HZ to 1Hz)
 # METHOD = '2' (fuse) is active # 'fuse' fuses sensors 'left' and 'right' when calling score_kinetic_energy()
 
@@ -158,7 +159,8 @@ def main():
                      margin_seconds=MARGIN_SECONDS)
 
     # Plot ----------------------------------
-    pat = '006'
+    pat = '006'   # patients who perceived increased exertion of 4 and more: 003 020 020 023 047
+    # pat = '003' 
     day = '1'
     side = 'right'
     plot_amplitude_spectra_per_exercise(df=df_raw, exercises=EXERCISES, # input: df_raw: demorton.h5
