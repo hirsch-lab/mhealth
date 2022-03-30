@@ -10,7 +10,7 @@ PandasData = Union[pd.DataFrame, pd.Series]
 def ensure_dir(path: PathLike,
                exist_ok: bool=True) -> bool:
     """
-    Path.mkdir() usually raises if the folder cannot be created.
+    Path.mkdir() normally raises if the folder cannot be created.
     """
     path = Path(path)
     if not path.is_dir():

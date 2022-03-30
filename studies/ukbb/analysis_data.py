@@ -5,15 +5,20 @@ import seaborn as sns
 from pathlib import Path
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from datetime import timezone, datetime
 
 import context
 from mhealth.utils.file_helper import ensure_dir
+from mhealth.utils.maths import split_contiguous
 from mhealth.utils.context_info import dump_context
-from mhealth.utils.commons import print_title, create_progress_bar
+from mhealth.utils.commons import (print_title, print_subtitle,
+                                   create_progress_bar)
 from mhealth.utils.plotter_helper import save_figure, setup_plotting
 
 from mhealth.utils.io_manager import IOManager
 from mhealth.utils.file_helper import write_csv, write_hdf, read_hdf
+
+################################################################################
 
 VITALS_DESCRIPTION = {
     "HR" : "Heart rate",
@@ -21,6 +26,15 @@ VITALS_DESCRIPTION = {
     "BloodPressure": "Blood pressure",
     "RespRate": "Respiratory rate",
     "objtemp": "Skin temperature"
+}
+
+VITALS_DESCRIPTION_MASIMO = {
+    "HR" : "Heart rate",
+    "Oxy": "Oxygen saturation",
+    "BPsys": "Blood pressure (systolic)",
+    "BPdia": "Blood pressure (diastolic)",
+    "Resp Rate": "Respiratory rate",
+    "Temp": "Skin temperature"
 }
 
 VITALS_TO_MASIMO = {
@@ -47,6 +61,11 @@ BIN_PARAMS = {
 
 MASIMO_COLORS = [ "#39B069",  "#D9605A" ]
 
+
+################################################################################
+# LOGGING
+################################################################################
+
 def log_info(dataset_id, msg):
     log_msg("INFO", dataset_id=dataset_id, msg=msg)
 def log_warn(dataset_id, msg):
@@ -55,11 +74,19 @@ def log_msg(level, dataset_id, msg):
     idstr = "id=%s " % dataset_id
     print("%-4s: %-7s %s" % (level, idstr, msg))
 
+
+################################################################################
+# FILTERING
+################################################################################
+
 def fix_time_gaps(df, max_gap_hours, dataset_id):
     def _first_loc_index_where(mask):
         return next((idx for idx, x in zip(mask.index, mask) if x), None)
     def _first_iloc_index_where(mask):
         return next((idx for idx, x in zip(range(len(mask)), mask) if x), None)
+
+    if max_gap_hours <= 0:
+        return df
 
     assert df.index.name == "timestamp"
     diff = df.index.to_series().diff()
@@ -132,16 +159,81 @@ def fix_non_monotonic_index(df, mode, max_gap_hours, dataset_id):
     return df
 
 
-def filter_quality(df, quality, dataset_id):
-    n = len(df)
-    mask = (df[QUALITY_COLS] > quality).all(axis=1)
-    mask &= (df["HR"] > 0)
+def filter_quality(df, dataset_id,
+                   quality, quality_cols,
+                   non_zero_cols=None,
+                   enabled=True):
+    if not enabled: return df
+
+    n_old = len(df)
+    mask = (df[quality_cols] > quality).all(axis=1)
+    mask &= (df[non_zero_cols] != 0).all(axis=1)
     df = df[mask]
-    if n!=len(df):
+
+    if n_old!=len(df) and dataset_id is not None:
         msg = ("Filtered %d (%0.2f%%) samples by quality (thr=%d)."
-               % (n-len(df), (n-len(df))/n*100, quality))
+               % (n_old-len(df), (n_old-len(df))/n_old*100, quality))
         log_warn(dataset_id, msg)
     return df.copy()
+
+
+def get_quality_cols(parameter):
+    if parameter.lower() == "spo2":
+        return ["SPO2Q"]   # or ["SPO2Q", "HR"]
+    elif parameter == "HR":
+        return ["HRQ"]
+    else:
+        return ["HRQ"]   # ["SPO2Q", "HR"]
+
+
+################################################################################
+# DATA IO
+################################################################################
+
+def get_io_manager(out_dir):
+    # The filenames look as follows:
+    #   - 001_raw_ukbb.csv
+
+    # Extract information from the filenames.
+    info_patterns = {
+        "pat_id": "([0-9]{3})_raw_ukbb",
+    }
+    # Write methods.
+    target_writers = {
+        ".h5": write_hdf
+    }
+    # Read methods (for lazy loading)
+    target_readers = {
+        ".h5": read_hdf
+    }
+    #target_writers[".csv"] = write_csv
+
+    # Construct filenames out of parts.
+    target_names = {
+        ".csv": "sensor/{pat_id}.csv",
+        ".h5":  "store/{pat_id}.h5/data"
+    }
+    # Works only for target .csv. (Checks inside a .h5 file not possible yet)
+    skip_existing = False
+    iom = IOManager(out_dir=out_dir,
+                    info_patterns=info_patterns,
+                    target_writers=target_writers,
+                    target_readers=target_readers,
+                    target_names=target_names,
+                    skip_existing=skip_existing,
+                    dry_run=False)
+    return iom
+
+
+def read_patient_data(path):
+    df = pd.read_csv(path,
+                     parse_dates=["Studyentry"],
+                     dayfirst=True,
+                     dtype={"Record_id": str})
+    df = df.rename({"Record_id": "pat_id"}, axis=1)
+    df["pat_id"] = df["pat_id"].astype(str).str.pad(width=3, fillchar="0")
+    df = df.set_index("pat_id")
+    return df
 
 
 def read_masimo(path, sep=";"):
@@ -149,7 +241,7 @@ def read_masimo(path, sep=";"):
                      sep=sep,
                      dtype={"Record_id": str})
     df["DateTime"] = pd.to_datetime(df["Date"]+" "+df["Time"],
-                                    dayfirst=True)
+                                    dayfirst=True, utc=True)
     return df
 
 
@@ -157,8 +249,7 @@ def read_data(path, iom,
               n_files=None, sep=";",
               lazy_load=True,
               max_gap_hours=24,
-              fix_non_monotonic="last",
-              quality=50):
+              fix_non_monotonic="last"):
     data = {}
     files = list(sorted(path.glob("*.csv")))
     n_files = len(files) if n_files is None else min(n_files, len(files))
@@ -185,14 +276,216 @@ def read_data(path, iom,
                                              mode=fix_non_monotonic,
                                              max_gap_hours=max_gap_hours,
                                              dataset_id=pat_id)
-                df = filter_quality(df=df, quality=quality,
-                                    dataset_id=pat_id)
                 iom.write_data(data=df)
 
             data[pat_id] = df
     return data
 
 
+################################################################################
+# PLOTTING
+################################################################################
+
+def plot_data_availability(data, masimo, patients, column, out_dir):
+
+    def plot_total_patch(ax, t0, t1, x, offset, width, **kwargs):
+        rect = plt.Rectangle(xy=(t0, x+offset-width/2),
+                             width=t1-t0,
+                             height=width,
+                             label="Total",
+                             **kwargs)
+        ax.add_patch(rect)
+        return rect
+
+    def plot_contiguous(ax, pat_id, indices, t, x, offset, width, **kwargs):
+        patches = []
+        for i, j in indices:
+            t0, t1 = t[i], t[j-1]
+            if t0 > t1:
+                msg = f"Found non-monotonic step: t0={t0:.1f}s, t1={t1:.1f}s"
+                log_warn(pat_id, msg)
+                continue
+            rect = plt.Rectangle(xy=(t0, x+offset-width/2),
+                                 width=t1-t0,
+                                 height=width,
+                                 **kwargs)
+            ax.add_patch(rect)
+            patches.append(rect)
+        return patches
+
+    def plot_day_night(ax, tlim, height, **kwargs):
+        t_morning = 6
+        t_evening = 21
+        zorder = -1
+        col_night = [0., 0., 0.2, 0.2]
+        col_day = [1., 1., 1., 1.,]
+
+        t = t_evening - 24
+        day = 0
+        while t < tlim[1]:
+            # Night
+            rect = plt.Rectangle(xy=(t, 0),
+                                 width=t_morning-t,
+                                 height=height,
+                                 label=f"night{day}",
+                                 facecolor=col_night,
+                                 edgecolor=None,
+                                 zorder=zorder,
+                                 **kwargs)
+            ax.add_patch(rect)
+            # Day
+            rect = plt.Rectangle(xy=(t_morning, 0),
+                                 width=t_evening-t_morning,
+                                 height=height,
+                                 label=f"day{day}",
+                                 facecolor=col_day,
+                                 edgecolor=None,
+                                 zorder=zorder,
+                                 **kwargs)
+            ax.add_patch(rect)
+            t += 24
+            t_morning += 24
+            t_evening += 24
+
+    def set_ticks(ax, patients, data, xlim):
+        if False:
+            # Hourly ticks
+            xticks = np.arange(0, xlim[1], 6)
+            xhours = xticks % 24
+            #xdays = xticks / 24
+            ax.set_xticks(xticks)
+            ax.set_xticklabels(("%d:00" % h for h in xhours),
+                               rotation=40, ha="right")
+        else:
+            # Daily ticks
+            from matplotlib.ticker import (MultipleLocator, FixedLocator,
+                                           NullFormatter, FixedFormatter)
+            xnoons = np.arange(12, xlim[1], 24)
+            xdays = xnoons.astype(int) // 24 + 1
+            ax.xaxis.set_major_locator(MultipleLocator(24))
+            ax.xaxis.set_minor_locator(FixedLocator(xnoons))
+            ax.xaxis.set_major_formatter(NullFormatter())
+            ax.xaxis.set_minor_formatter(FixedFormatter(xdays))
+            ax.tick_params(which="minor", length=0)
+            ax.set_xlabel("Study days")
+            #ax.set_xticklabels(("%d" % h for h in xdays))
+            #ax.tick_params(axis="x", which="minor", bottom=True)
+
+        ax.set_yticks(np.arange(len(data),0, -1))
+        if False:
+            # Only id
+            ax.set_yticklabels(data.keys())
+        else:
+            # Id and patient data
+            import matplotlib
+            age = patients.loc[data.keys(), "Age"]  # age in months
+            age = (age/12).round().astype(int)
+            sex = patients.loc[data.keys(), "Sex"].str[:1]
+            args = zip(data.keys(), age, sex)
+            ax.set_yticklabels(("%s (%dy, %s)" % arg for arg in args),
+                               ha="left")
+            ax.yaxis.set_tick_params(pad=70)
+
+    def plot_masimo(ax, masimo, pat_id, column, x, start_zero):
+        masimo = masimo[masimo["Record_id"]==pat_id].copy()
+        time = (masimo["DateTime"]-start_zero).dt.total_seconds() / 3600
+        ax.plot(time, np.ones_like(time)*x, "k|")
+        column = VITALS_TO_MASIMO[column]
+        if isinstance(column, list):
+            column = column[0]
+        mask = ~masimo[column].isna()
+        time = time[mask]
+        ax.plot(time, np.ones_like(time)*x, marker="|", color="#3498DB",
+                linestyle="None")
+
+
+    width = 0.6
+    tol = 1/12   # tol in hours
+    fig, ax = plt.subplots(figsize=(6.4, 4.8/16*len(data)))
+    for i, (pat_id, df) in enumerate(data.items()):
+        x = len(data)-i
+        # Zero time.
+        start_time = df.index.min()
+        start_zero = pd.Timestamp(start_time.date(), tz="UTC")  # Start at 0:00
+        time = (df.index - start_zero).total_seconds() / 3600
+        # Total time.
+        h_total = plot_total_patch(ax=ax, t0=time.min(), t1=time.max(), x=x,
+                                   width=width, offset=0,
+                                   facecolor=[0.8]*3, edgecolor=[0.4]*3)
+
+        ts_nona = df[column].dropna().index
+        ts_nona = (ts_nona - start_zero).total_seconds() / 3600
+        indices = split_contiguous(arr=ts_nona, tol=tol, indices=True)
+        h_cts = plot_contiguous(ax=ax, pat_id=pat_id,
+                                indices=indices, t=ts_nona, x=x,
+                                offset=0, width=width,
+                                edgecolor=None, linewidth=0,
+                                color="#CD6155", alpha=0.7)
+
+        # Filtered.
+        df_filtered = filter_quality(df.copy(),
+                                     quality=50,
+                                     quality_cols=get_quality_cols(column),
+                                     non_zero_cols=[column],
+                                     dataset_id=None)
+        ts_nona = df_filtered[column].dropna().index
+        ts_nona = (ts_nona - start_zero).total_seconds() / 3600
+        indices = split_contiguous(arr=ts_nona, tol=tol, indices=True)
+        h_cts = plot_contiguous(ax=ax, pat_id=pat_id,
+                                indices=indices, t=ts_nona, x=x,
+                                offset=0, width=width,
+                                edgecolor=None, linewidth=0,
+                                color="#609E7C")
+
+        # Plot Masimo data
+        if masimo is not None:
+            plot_masimo(ax=ax, masimo=masimo, pat_id=pat_id,
+                        column=column, x=x, start_zero=start_zero)
+
+    plt.autoscale(enable=True)
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    set_ticks(ax=ax, patients=patients, data=data, xlim=xlim)
+    plot_day_night(ax, tlim=xlim, height=ylim[1]-ylim[0])
+    ax.grid(axis="x")
+    ax.set_axisbelow(True)
+    plt.tight_layout()
+    filename = ("availability-%s.pdf" % column).lower()
+    save_figure(out_dir / filename, fig=fig, override=True)
+
+
+################################################################################
+def plot_data_availability_all(data, patients, masimo, out_dir):
+    """
+    Best results expected for unfiltered data.
+    """
+
+    out_dir_basic = out_dir/"availability/basic"
+    plot_data_availability(data=data, masimo=None, patients=patients,
+                           column="HR", out_dir=out_dir_basic)
+    plot_data_availability(data=data, masimo=None, patients=patients,
+                           column="SPo2", out_dir=out_dir_basic)
+    plot_data_availability(data=data, masimo=None, patients=patients,
+                           column="RespRate", out_dir=out_dir_basic)
+    plot_data_availability(data=data, masimo=None, patients=patients,
+                           column="BloodPressure", out_dir=out_dir_basic)
+    plot_data_availability(data=data, masimo=None, patients=patients,
+                           column="objtemp", out_dir=out_dir_basic)
+
+    out_dir_masimo = out_dir/"availability/masimo"
+    plot_data_availability(data=data, masimo=masimo, patients=patients,
+                           column="HR", out_dir=out_dir_masimo)
+    plot_data_availability(data=data, masimo=masimo, patients=patients,
+                           column="SPo2", out_dir=out_dir_masimo)
+    plot_data_availability(data=data, masimo=masimo, patients=patients,
+                           column="RespRate", out_dir=out_dir_masimo)
+    plot_data_availability(data=data, masimo=masimo, patients=patients,
+                           column="BloodPressure", out_dir=out_dir_masimo)
+    plot_data_availability(data=data, masimo=masimo, patients=patients,
+                           column="objtemp", out_dir=out_dir_masimo)
+
+
+################################################################################
 def plot_histograms(data, masimo, out_dir, combine=False):
     def with_margin(rng, margin):
         margin = (rng[1]-rng[0])*margin
@@ -256,6 +549,7 @@ def plot_histograms(data, masimo, out_dir, combine=False):
     plt.close(fig)
 
 
+################################################################################
 def plot_boxplots(data, masimo, out_dir, prefix="", outliers=False):
     fig, ax = plt.subplots()
     label = "Plotting (boxplots)..."
@@ -314,48 +608,131 @@ def plot_boxplots(data, masimo, out_dir, prefix="", outliers=False):
     plt.close(fig)
 
 
-def get_io_manager(out_dir):
-    # The filenames look as follows:
-    #   - 001_raw_ukbb.csv
+################################################################################
+# SUMMARY
+################################################################################
 
-    # Extract information from the filenames.
-    info_patterns = {
-        "pat_id": "([0-9]{3})_raw_ukbb",
-    }
-    # Write methods.
-    target_writers = {
-        ".h5": write_hdf
-    }
-    # Read methods (for lazy loading)
-    target_readers = {
-        ".h5": read_hdf
-    }
-    #target_writers[".csv"] = write_csv
+def summarize_data(data, masimo, patients, out_dir):
 
-    # Construct filenames out of parts.
-    target_names = {
-        ".csv": "sensor/{pat_id}.csv",
-        ".h5":  "store/{pat_id}.h5/data"
-    }
-    # Works only for target .csv. (Checks inside a .h5 file not possible yet)
-    skip_existing = False
-    iom = IOManager(out_dir=out_dir,
-                    info_patterns=info_patterns,
-                    target_writers=target_writers,
-                    target_readers=target_readers,
-                    target_names=target_names,
-                    skip_existing=skip_existing,
-                    dry_run=False)
-    return iom
+    def _nicify(df, with_counts=False):
+        df = df.droplevel(0, axis=1)
+        if "count" in df and with_counts:
+            def format_str(x):
+                if pd.isna(x["mean"]):
+                    return "n/a"
+                elif pd.isna(x["std"]):
+                    return f"{x['mean']:.2f} (n={int(x['count'])})"
+                else:
+                    return f"{x['mean']:.2f} ± {x['std']:.2f} (n={int(x['count'])})"
+        else:
+            def format_str(x):
+                return f"{x['mean']:.2f} ± {x['std']:.2f}"
 
+        return df.apply(format_str, axis=1)
+
+    def _time_delta(df):
+        start = df.index.get_level_values("timestamp").min()
+        stop = df.index.get_level_values("timestamp").max()
+        return stop-start
+
+    def _format_delta(delta):
+        h = (delta.dt.total_seconds() / 3600).astype(int)
+        d = delta.dt.components["days"]
+        ret = pd.concat([d,h], keys=["days", "hours"], axis=1)
+        ret = ret.apply(lambda r: f"{r['days']}d ({r['hours']}h)", axis=1)
+        return ret
+
+    def _summarize(df, patients, out_dir, name):
+        patients = patients[["Sex", "Age", "Diagnosis", "Height", "Weight"]].copy()
+        patients["Age"] = (patients["Age"] / 12).round().astype(int)
+        summary = df.groupby("pat_id").describe()
+        summary.columns.names = ["vital", "measure"]
+
+        # Compute duration
+        delta = df.groupby("pat_id").apply(_time_delta)
+        delta = delta.dt.round("H")
+        delta = _format_delta(delta)
+        delta.name = ("Time", "Time measured")
+
+        ret = pd.concat([patients], keys=["Patient"], axis=1)
+        ret = ret.join(summary, how="right")
+        ret = ret.join(delta)
+        ret.to_csv(out_dir / (name+".csv"))
+
+        summary2 = summary.groupby("vital", axis=1).apply(_nicify)
+        delta.name = "Time measured"
+        summary2 = summary2.join(delta)
+        summary2["counts"] = summary.loc[:,("Heart rate", "count")].astype(int)
+        ret2 = patients.join(summary2, how="right")
+        ret2.to_csv(out_dir / (name+"_short"+".csv"))
+        return ret2
+
+
+    def _summarize_massimo(patients, masimo, out_dir, name):
+        summary = masimo.rename(VITALS_DESCRIPTION_MASIMO, axis=1)
+        summary = summary.rename({"Record_id": "pat_id"}, axis=1)
+        summary = summary.groupby("pat_id").describe()
+        summary = summary.loc[:,pd.IndexSlice[:,["mean", "std", "count"]]]
+        summary.columns.names = ["vital", "measure"]
+
+        patients = patients[["Sex", "Age", "Diagnosis", "Height", "Weight"]].copy()
+        patients["Age"] = (patients["Age"] / 12).round().astype(int)
+
+        ret = pd.concat([patients], keys=["Patient"], axis=1)
+        ret = ret.join(summary, how="right")
+        ret.to_csv(out_dir / (name+".csv"))
+
+        summary2 = summary.groupby("vital", axis=1).apply(_nicify, with_counts=True)
+        ret2 = patients.join(summary2, how="right")
+        ret2.to_csv(out_dir / (name+"_short"+".csv"))
+        return ret2
+
+
+    df = pd.concat(data, axis=0, names=("pat_id", "timestamp"))
+    df = df[VITAL_COLS]
+    df = df.rename(VITALS_DESCRIPTION, axis=1)
+
+    print_title("Summary Masimo:")
+    summary = _summarize_massimo(patients=patients, masimo=masimo,
+                                 out_dir=out_dir, name="masimo")
+    print(summary)
+
+    print_title("Summary Wearables Data:")
+    print_subtitle("Overall")
+    summary = _summarize(df=df, patients=patients,
+                         out_dir=out_dir, name="overall")
+    print(summary)
+
+    print_subtitle("Daytime")
+    ts = df.index.get_level_values("timestamp")
+    df_day = df[(ts.hour>=9) & (ts.hour<=18)]
+    summary = _summarize(df=df_day, patients=patients,
+                         out_dir=out_dir, name="day")
+    print(summary)
+
+    print_subtitle("Nighttime")
+    df_night = df[(ts.hour<=6) | (ts.hour>=22)]
+    summary = _summarize(df=df_night, patients=patients,
+                         out_dir=out_dir, name="night")
+    print(summary)
+
+    # log_info()
+
+
+################################################################################
+# MAIN
+################################################################################
 
 def run(args):
     n_files = args.n_files
-    data_dir = Path(args.in_dir)
-    masimo_file = Path(args.masimo_file)
+    in_dir = Path(args.in_dir)
+    data_dir = in_dir / "cleaned_data" / "data_short_header"
+    masimo_file = in_dir / "masimo" / "vitals_pheonix_main.csv"
+    pat_file = in_dir / "patients.csv"
     out_dir = Path(args.out_dir)
     lazy_load = not args.forced_read
     quality = args.quality
+    max_gap = args.max_gap
     dump_context(out_dir=out_dir)
     setup_plotting()
     iom = get_io_manager(out_dir=out_dir)
@@ -365,23 +742,40 @@ def run(args):
     print("    out_dir:", out_dir)
     print()
     masimo = read_masimo(path=masimo_file)
+    patients = read_patient_data(path=pat_file)
+
+    # Read data, no quality filtering!
     data = read_data(data_dir, iom=iom,
                      n_files=n_files,
                      lazy_load=lazy_load,
-                     max_gap_hours=12,
-                     fix_non_monotonic="last",
-                     quality=quality)
-    plot_histograms(data=data, masimo=None,
-                    out_dir=out_dir/"histograms", combine=True)
-    plot_histograms(data=data, masimo=masimo,
-                    out_dir=out_dir/"histograms")
-    plot_boxplots(data=data, masimo=None, prefix="plain-",
-                  out_dir=out_dir/"boxplots")
-    plot_boxplots(data=data, masimo=masimo, prefix="masimo-",
-                  out_dir=out_dir/"boxplots")
-    plot_boxplots(data=data, masimo=None, prefix="outliers-",
-                  out_dir=out_dir/"boxplots",
-                  outliers=True)
+                     max_gap_hours=max_gap,
+                     fix_non_monotonic="last")
+
+    plot_data_availability_all(data=data, patients=patients,
+                               masimo=masimo, out_dir=out_dir)
+
+    exit()
+
+    # TODO QUALITY FITERING LOGIC!
+    logic
+
+    df = filter_quality(df=df, quality=quality,
+                        dataset_id=pat_id)
+
+    summarize_data(data=data, masimo=masimo, patients=patients,
+                   out_dir=out_dir)
+
+    # plot_histograms(data=data, masimo=None,
+    #                 out_dir=out_dir/"histograms", combine=True)
+    # plot_histograms(data=data, masimo=masimo,
+    #                 out_dir=out_dir/"histograms")
+    # plot_boxplots(data=data, masimo=None, prefix="plain-",
+    #               out_dir=out_dir/"boxplots")
+    # plot_boxplots(data=data, masimo=masimo, prefix="masimo-",
+    #               out_dir=out_dir/"boxplots")
+    # plot_boxplots(data=data, masimo=None, prefix="outliers-",
+    #               out_dir=out_dir/"boxplots",
+    #               outliers=True)
 
 
 def parse_args():
@@ -394,16 +788,16 @@ def parse_args():
                         help="Show this help text")
     parser.add_argument("-i", "--in-dir", required=True,
                         help="Input directory")
-    parser.add_argument("-m", "--masimo-file", required=True,
-                        help="Path to file with Masimo data")
     parser.add_argument("-o", "--out-dir", help="Output directory",
                         default="output/")
     parser.add_argument("-n", "--n-files", default=None, type=int,
                         help="Number of datasets to include")
     parser.add_argument("-f", "--forced-read", action="store_true",
                         help="Disable lazy-loading of data")
-    parser.add_argument("--quality", type=int, default=50,
+    parser.add_argument("-q", "--quality", type=int, default=50,
                         help="Threshold for quality filtering")
+    parser.add_argument("--max-gap", type=int, default=24,
+                        help="Maximal gap in hours tolerated")
     parser.set_defaults(func=run)
     return parser.parse_args()
 
