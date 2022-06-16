@@ -5,7 +5,7 @@ import seaborn as sns
 from pathlib import Path
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from datetime import timezone, datetime
+from datetime import timezone, datetime, timedelta
 
 import context
 from mhealth.utils.file_helper import ensure_dir
@@ -112,6 +112,23 @@ def fix_time_gaps(df, max_gap_hours, dataset_id):
         msg = "Found a gap of %d hours, clipped %d rows (%.3f%%)"
         log_info(dataset_id, msg % (delta, sum(~mask), (~mask).mean()*100))
         df = df.loc[mask].copy()
+
+    # Check if we have a larger gap at the end of the sequence.
+    # This gap may be smaller than the max_gap_hours.
+    n_last_steps = 1000
+    trail_gap_thr = 1*3600
+    diff = df.index[-n_last_steps:].to_series().diff()
+    diff = diff[~diff.isna()]  # to get rid of initial NaT (not a time)
+    diff = diff.dt.total_seconds()
+    rank = diff.sort_values(ascending=False)
+    key, diff_max = next(rank.items())
+    if diff_max > trail_gap_thr:
+        n_before = len(df)
+        df = df[:key][:-1].copy()
+        n_after = len(df)
+        if n_before != n_after:
+            msg = "Clipped a trailing gap of %.1f hours:"
+            log_info(dataset_id, msg % (diff_max/3600))
     return df
 
 
@@ -163,7 +180,8 @@ def filter_quality(df, dataset_id,
                    quality, quality_cols,
                    non_zero_cols=None,
                    enabled=True):
-    if not enabled: return df
+    if not enabled:
+        return df.copy()
 
     n_old = len(df)
     mask = (df[quality_cols] > quality).all(axis=1)
@@ -178,9 +196,9 @@ def filter_quality(df, dataset_id,
 
 
 def get_quality_cols(parameter):
-    if parameter.lower() == "spo2":
+    if parameter.lower() in "spo2":
         return ["SPO2Q"]   # or ["SPO2Q", "HR"]
-    elif parameter == "HR":
+    elif parameter in ("HR", "objtemp"):
         return ["HRQ"]
     else:
         return ["HRQ"]   # ["SPO2Q", "HR"]
@@ -257,6 +275,9 @@ def read_data(path, iom,
     with create_progress_bar(size=n_files,
                              label=label) as progress:
         for i, filepath in enumerate(files):
+            if i > 5:
+                pass #break
+
             progress.update(i)
             iom.set_current(filepath)
             pat_id = iom.info.get("pat_id")
@@ -287,6 +308,9 @@ def read_data(path, iom,
 ################################################################################
 
 def plot_data_availability(data, masimo, patients, column, out_dir):
+    """
+    Data before quality filtering!
+    """
 
     def plot_total_patch(ax, t0, t1, x, offset, width, **kwargs):
         rect = plt.Rectangle(xy=(t0, x+offset-width/2),
@@ -313,39 +337,45 @@ def plot_data_availability(data, masimo, patients, column, out_dir):
             patches.append(rect)
         return patches
 
+
+    def plot_lines(ax, t, x, offset, width, **kwargs):
+        from matplotlib import collections  as mc
+        lines = [[(tt, x+offset-width/2), (tt, x+width+offset-width/2)] for tt in t]
+        lc = mc.LineCollection(lines, **kwargs)
+        ax.add_collection(lc)
+        return lc
+
+
     def plot_day_night(ax, tlim, height, **kwargs):
+        margin = 0.5
         t_morning = 6
         t_evening = 21
+        t_mornings = np.arange(tlim[0]//24*24 + t_morning, tlim[1]+24, 24)
+        t_evenings = np.arange((tlim[0]//24-1)*24 + t_evening, tlim[1], 24)
+
         zorder = -1
-        col_night = [0., 0., 0.2, 0.2]
+        col_night = [0.2, 0.2, 0.5, 0.1]
         col_day = [1., 1., 1., 1.,]
 
-        t = t_evening - 24
-        day = 0
-        while t < tlim[1]:
+        for tm, te in zip(t_mornings, t_evenings):
             # Night
-            rect = plt.Rectangle(xy=(t, 0),
-                                 width=t_morning-t,
-                                 height=height,
-                                 label=f"night{day}",
+            rect = plt.Rectangle(xy=(te,-margin),
+                                 width=tm-te,
+                                 height=height+2*margin,
                                  facecolor=col_night,
-                                 edgecolor=None,
+                                 edgecolor="none",
                                  zorder=zorder,
                                  **kwargs)
             ax.add_patch(rect)
             # Day
-            rect = plt.Rectangle(xy=(t_morning, 0),
-                                 width=t_evening-t_morning,
+            rect = plt.Rectangle(xy=(tm, 0),
+                                 width=te-tm+24,
                                  height=height,
-                                 label=f"day{day}",
                                  facecolor=col_day,
-                                 edgecolor=None,
+                                 edgecolor="none",
                                  zorder=zorder,
                                  **kwargs)
             ax.add_patch(rect)
-            t += 24
-            t_morning += 24
-            t_evening += 24
 
     def set_ticks(ax, patients, data, xlim):
         if False:
@@ -386,24 +416,32 @@ def plot_data_availability(data, masimo, patients, column, out_dir):
                                ha="left")
             ax.yaxis.set_tick_params(pad=70)
 
-    def plot_masimo(ax, masimo, pat_id, column, x, start_zero):
+    def plot_masimo(ax, masimo, pat_id, column, start_zero, x, width):
         masimo = masimo[masimo["Record_id"]==pat_id].copy()
         time = (masimo["DateTime"]-start_zero).dt.total_seconds() / 3600
-        ax.plot(time, np.ones_like(time)*x, "k|")
+        plot_total_patch(ax=ax, t0=time.min(), t1=time.max(), x=x,
+                         width=width/2, offset=-width/2,
+                         facecolor="white", edgecolor=[0.6]*3, alpha=0.7)
+        plot_lines(ax=ax, t=time, x=x, offset=-width/2,
+                   width=width/2, color="k", lw=0.75)
+        #ax.plot(time, np.ones_like(time)*x, "k|")
         column = VITALS_TO_MASIMO[column]
         if isinstance(column, list):
             column = column[0]
         mask = ~masimo[column].isna()
         time = time[mask]
-        ax.plot(time, np.ones_like(time)*x, marker="|", color="#3498DB",
-                linestyle="None")
 
 
-    width = 0.6
+        # ax.plot(time, np.ones_like(time)*x, marker="|", color="#3498DB",
+        #         linestyle="None")
+
+
+    width = 0.5
     tol = 1/12   # tol in hours
-    fig, ax = plt.subplots(figsize=(6.4, 4.8/16*len(data)))
+    fig, ax = plt.subplots(figsize=(6.4, 4.8/14*len(data)))
     for i, (pat_id, df) in enumerate(data.items()):
         x = len(data)-i
+
         # Zero time.
         start_time = df.index.min()
         start_zero = pd.Timestamp(start_time.date(), tz="UTC")  # Start at 0:00
@@ -411,7 +449,7 @@ def plot_data_availability(data, masimo, patients, column, out_dir):
         # Total time.
         h_total = plot_total_patch(ax=ax, t0=time.min(), t1=time.max(), x=x,
                                    width=width, offset=0,
-                                   facecolor=[0.8]*3, edgecolor=[0.4]*3)
+                                   facecolor=[0.8]*3, edgecolor=[0.2]*3)
 
         ts_nona = df[column].dropna().index
         ts_nona = (ts_nona - start_zero).total_seconds() / 3600
@@ -420,13 +458,14 @@ def plot_data_availability(data, masimo, patients, column, out_dir):
                                 indices=indices, t=ts_nona, x=x,
                                 offset=0, width=width,
                                 edgecolor=None, linewidth=0,
-                                color="#CD6155", alpha=0.7)
+                                facecolor="#CD6155", alpha=0.7)
 
-        # Filtered.
+        # Filter data. Quality metrics differ for different vital parameters.
+        # Always use heart rate > 0 as condition to see if the wearable is worn.
         df_filtered = filter_quality(df.copy(),
                                      quality=50,
                                      quality_cols=get_quality_cols(column),
-                                     non_zero_cols=[column],
+                                     non_zero_cols=[column, "HR"],
                                      dataset_id=None)
         ts_nona = df_filtered[column].dropna().index
         ts_nona = (ts_nona - start_zero).total_seconds() / 3600
@@ -440,14 +479,14 @@ def plot_data_availability(data, masimo, patients, column, out_dir):
         # Plot Masimo data
         if masimo is not None:
             plot_masimo(ax=ax, masimo=masimo, pat_id=pat_id,
-                        column=column, x=x, start_zero=start_zero)
+                        column=column, x=x, start_zero=start_zero, width=width)
 
     plt.autoscale(enable=True)
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     set_ticks(ax=ax, patients=patients, data=data, xlim=xlim)
     plot_day_night(ax, tlim=xlim, height=ylim[1]-ylim[0])
-    ax.grid(axis="x")
+    #ax.grid(axis="x")
     ax.set_axisbelow(True)
     plt.tight_layout()
     filename = ("availability-%s.pdf" % column).lower()
@@ -459,7 +498,6 @@ def plot_data_availability_all(data, patients, masimo, out_dir):
     """
     Best results expected for unfiltered data.
     """
-
     out_dir_basic = out_dir/"availability/basic"
     plot_data_availability(data=data, masimo=None, patients=patients,
                            column="HR", out_dir=out_dir_basic)
@@ -609,10 +647,131 @@ def plot_boxplots(data, masimo, out_dir, prefix="", outliers=False):
 
 
 ################################################################################
+def visualize_bland_altman(data, masimo, col, out_dir,
+                           delta_min=15,
+                           distinguish_pats=False):
+
+    def compute_means(sensor, valid, col, delta_min):
+        valid = valid[~valid.isna()]
+
+        means = []
+        for exam_time in valid.index:
+            time_delta = timedelta(minutes=delta_min)
+            start_time = exam_time - time_delta
+            stop_time = exam_time + time_delta
+            mask = (sensor.index >= start_time) & (sensor.index <= stop_time)
+            mean = sensor[mask].mean(axis=0)
+            means.append(mean)
+        return pd.Series(means, index=valid.index, dtype=float)
+
+    def plot_bland_altman(sensor, valid, col, out_dir, distinguish_pats=True):
+        # Align the data
+        diff = sensor-valid;    diff.name = "Difference"
+        avg = (valid+sensor)/2; avg.name = "Mean"
+        diff_mean = diff.mean()
+        diff_std = diff.std()
+        offset_ci = 1.96*diff_std
+        offset_miss = diff.abs().max()*1.2
+        y_off = lambda x, offset: offset*np.ones_like(x)
+
+        # Info
+        n_sensor = sensor.notna().sum()
+        n_valid = valid.notna().sum()
+        n_diff = diff.notna().sum()
+        info = "Info:\n#sensor: %d\n#masimo: %d\n#diff:   %d\ndelta:   %d min"
+        info = info % (n_sensor, n_valid, n_diff, delta_min)
+
+        fig, ax = plt.subplots()
+        if distinguish_pats:
+            comparison_data = pd.concat([avg, diff], axis=1)
+            comparison_data.index.names = ["pat_id", "DateTime"]
+            comparison_data = comparison_data.reset_index(level=0)
+            #comparison_data["pat_id"] = comparison_data["pat_id"].astype(int)
+            palette = sns.color_palette("hls",
+                                        comparison_data["pat_id"].nunique())
+            sns.scatterplot(x="Mean", y="Difference", hue="pat_id",
+                            data=comparison_data, ax=ax, palette=palette,
+                            edgecolor="none", alpha=0.7)
+            h_valid = ax.get_children()[0]  # Best guess hack
+        else:
+            h_valid = ax.scatter(avg, diff, c="black", alpha=0.2)
+        xlim = ax.get_xlim()
+        h_mean, = ax.plot(xlim, diff_mean*np.ones(2), "b", zorder=100)
+        h_cip, = ax.plot(xlim, y_off(np.ones(2), +offset_ci), ":r", zorder=100)
+        h_cim, = ax.plot(xlim, y_off(np.ones(2), -offset_ci), ":r", zorder=100)
+        #h_tip, = ax.plot(xlim, y_off(np.ones(2), +DELTAS[col]), "r",
+        #                 zorder=100)
+        #h_tim, = ax.plot(xlim, y_off(np.ones(2), -DELTAS[col]), "r",
+        #                 zorder=100)
+        h_dummy, = plt.plot([avg.mean()],[0], color="w", alpha=0)
+
+        ax.grid(True)
+        ax.set_axisbelow(True)
+        ax.set_title(f"Bland-Altman ({col})")
+        ax.set_xlabel("Mean: (Sensor+Masimo)/2")
+        ax.set_ylabel("Difference: (Sensor-Masimo)")
+        legend = [(h_mean,   "Mean: %.2f" % diff_mean),
+                  #(h_tim,    "Tol: ±%.2f" % (DELTAS[col])),
+                  (h_cim,    "95%% CI: ±%.2f" % (1.96*diff_std)),
+                  (h_dummy,  ""),
+                  (h_valid,  "Patients")]
+        leg = ax.legend(*zip(*legend),
+                        title="Difference:",
+                        loc="upper left",
+                        bbox_to_anchor=(1.05, 1.02))
+
+        # these are matplotlib.patch.Patch properties
+        props = dict(alpha=0.5, family="DejaVu Sans Mono", fontsize=9)
+        # place a text box in upper left in axes coords
+        ax.text(1.09, 0.6, info, transform=ax.transAxes,
+                verticalalignment="top", **props)
+
+        plt.tight_layout()
+        leg._legend_box.align = "left"
+        for lh in leg.legendHandles:
+            lh.set_alpha(1)
+        file_path = out_dir / ("bland_altman_%s_%dmin.png" % (col, delta_min))
+        save_figure(path=file_path, fig=fig, dpi=300)
+
+
+    sensor_data = {}
+    valid_data = {}
+    for pat_id, df_masimo in masimo.groupby("Record_id"):
+        df_masimo = df_masimo.set_index("DateTime")
+        df_everion = data[pat_id]
+        sensor = df_everion[col]
+        if col == "BloodPressure":
+            valid = df_masimo["BPsys"]
+        else:
+            valid = df_masimo[VITALS_TO_MASIMO[col]]
+        sensor = compute_means(sensor=sensor, valid=valid,
+                               col=col, delta_min=delta_min)
+        sensor_data[pat_id] = sensor
+        valid_data[pat_id] = valid
+
+    sensor_data = pd.concat(sensor_data)
+    valid_data = pd.concat(valid_data)
+    plot_bland_altman(sensor=sensor_data, valid=valid_data,
+                      col=col, out_dir=out_dir,
+                      distinguish_pats=distinguish_pats)
+
+
+def visualize_bland_altman_all(data, masimo, out_dir, delta_min=15):
+    for vital in VITAL_COLS:
+        visualize_bland_altman(data, masimo, out_dir=out_dir/"ba",
+                               col=vital, delta_min=delta_min,
+                               distinguish_pats=False)
+        visualize_bland_altman(data, masimo, out_dir=out_dir/"ba-per-patient",
+                               col=vital, delta_min=delta_min,
+                               distinguish_pats=True)
+
+
+
+################################################################################
 # SUMMARY
 ################################################################################
 
-def summarize_data(data, masimo, patients, out_dir):
+def summarize_data(data, masimo, patients, quality, out_dir):
 
     def _nicify(df, with_counts=False):
         df = df.droplevel(0, axis=1)
@@ -642,11 +801,25 @@ def summarize_data(data, masimo, patients, out_dir):
         ret = ret.apply(lambda r: f"{r['days']}d ({r['hours']}h)", axis=1)
         return ret
 
-    def _summarize(df, patients, out_dir, name):
+    def _summarize(df, patients, out_dir, name, quality):
+        def _filtered_agg(df, quality):
+            ret = []
+            for col in VITAL_COLS:
+                df_filt = filter_quality(df, dataset_id=None,
+                                         quality=quality,
+                                         quality_cols=get_quality_cols(col),
+                                         non_zero_cols=[col, "HR"],
+                                         enabled=True)
+                ret.append(df_filt[col].describe())
+            ret = pd.concat(ret, keys=VITAL_COLS, axis=0)
+            return ret
+
+
         patients = patients[["Sex", "Age", "Diagnosis", "Height", "Weight"]].copy()
         patients["Age"] = (patients["Age"] / 12).round().astype(int)
-        summary = df.groupby("pat_id").describe()
+        summary = df.groupby("pat_id").apply(_filtered_agg, quality=50)
         summary.columns.names = ["vital", "measure"]
+        summary = summary.rename(VITALS_DESCRIPTION, axis=1)
 
         # Compute duration
         delta = df.groupby("pat_id").apply(_time_delta)
@@ -659,7 +832,8 @@ def summarize_data(data, masimo, patients, out_dir):
         ret = ret.join(delta)
         ret.to_csv(out_dir / (name+".csv"))
 
-        summary2 = summary.groupby("vital", axis=1).apply(_nicify)
+        summary2 = summary.groupby("vital", axis=1).apply(_nicify,
+                                                          with_counts=True)
         delta.name = "Time measured"
         summary2 = summary2.join(delta)
         summary2["counts"] = summary.loc[:,("Heart rate", "count")].astype(int)
@@ -672,7 +846,6 @@ def summarize_data(data, masimo, patients, out_dir):
         summary = masimo.rename(VITALS_DESCRIPTION_MASIMO, axis=1)
         summary = summary.rename({"Record_id": "pat_id"}, axis=1)
         summary = summary.groupby("pat_id").describe()
-        summary = summary.loc[:,pd.IndexSlice[:,["mean", "std", "count"]]]
         summary.columns.names = ["vital", "measure"]
 
         patients = patients[["Sex", "Age", "Diagnosis", "Height", "Weight"]].copy()
@@ -680,17 +853,19 @@ def summarize_data(data, masimo, patients, out_dir):
 
         ret = pd.concat([patients], keys=["Patient"], axis=1)
         ret = ret.join(summary, how="right")
+        #ret = ret.sort_index(level=0, axis=1)
         ret.to_csv(out_dir / (name+".csv"))
 
-        summary2 = summary.groupby("vital", axis=1).apply(_nicify, with_counts=True)
+        summary2 = summary.groupby("vital", axis=1).apply(_nicify,
+                                                          with_counts=True)
         ret2 = patients.join(summary2, how="right")
         ret2.to_csv(out_dir / (name+"_short"+".csv"))
         return ret2
 
 
     df = pd.concat(data, axis=0, names=("pat_id", "timestamp"))
-    df = df[VITAL_COLS]
-    df = df.rename(VITALS_DESCRIPTION, axis=1)
+    #df = df[VITAL_COLS]
+    #df = df.rename(VITALS_DESCRIPTION, axis=1)
 
     print_title("Summary Masimo:")
     summary = _summarize_massimo(patients=patients, masimo=masimo,
@@ -699,20 +874,20 @@ def summarize_data(data, masimo, patients, out_dir):
 
     print_title("Summary Wearables Data:")
     print_subtitle("Overall")
-    summary = _summarize(df=df, patients=patients,
+    summary = _summarize(df=df, patients=patients, quality=quality,
                          out_dir=out_dir, name="overall")
     print(summary)
 
     print_subtitle("Daytime")
     ts = df.index.get_level_values("timestamp")
     df_day = df[(ts.hour>=9) & (ts.hour<=18)]
-    summary = _summarize(df=df_day, patients=patients,
+    summary = _summarize(df=df_day, patients=patients, quality=quality,
                          out_dir=out_dir, name="day")
     print(summary)
 
     print_subtitle("Nighttime")
     df_night = df[(ts.hour<=6) | (ts.hour>=22)]
-    summary = _summarize(df=df_night, patients=patients,
+    summary = _summarize(df=df_night, patients=patients, quality=quality,
                          out_dir=out_dir, name="night")
     print(summary)
 
@@ -754,28 +929,23 @@ def run(args):
     plot_data_availability_all(data=data, patients=patients,
                                masimo=masimo, out_dir=out_dir)
 
-    exit()
-
-    # TODO QUALITY FITERING LOGIC!
-    logic
-
-    df = filter_quality(df=df, quality=quality,
-                        dataset_id=pat_id)
-
     summarize_data(data=data, masimo=masimo, patients=patients,
-                   out_dir=out_dir)
+                   quality=50, out_dir=out_dir)
 
-    # plot_histograms(data=data, masimo=None,
-    #                 out_dir=out_dir/"histograms", combine=True)
-    # plot_histograms(data=data, masimo=masimo,
-    #                 out_dir=out_dir/"histograms")
-    # plot_boxplots(data=data, masimo=None, prefix="plain-",
-    #               out_dir=out_dir/"boxplots")
-    # plot_boxplots(data=data, masimo=masimo, prefix="masimo-",
-    #               out_dir=out_dir/"boxplots")
-    # plot_boxplots(data=data, masimo=None, prefix="outliers-",
-    #               out_dir=out_dir/"boxplots",
-    #               outliers=True)
+    plot_histograms(data=data, masimo=None,
+                    out_dir=out_dir/"histograms", combine=True)
+    plot_histograms(data=data, masimo=masimo,
+                    out_dir=out_dir/"histograms")
+    plot_boxplots(data=data, masimo=None, prefix="plain-",
+                  out_dir=out_dir/"boxplots")
+    plot_boxplots(data=data, masimo=masimo, prefix="masimo-",
+                  out_dir=out_dir/"boxplots")
+    plot_boxplots(data=data, masimo=None, prefix="outliers-",
+                  out_dir=out_dir/"boxplots",
+                  outliers=True)
+
+    visualize_bland_altman_all(data=data, masimo=masimo,
+                               out_dir=out_dir, delta_min=15)
 
 
 def parse_args():
