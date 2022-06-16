@@ -193,7 +193,7 @@ def extract_data_store(filepath, delta_minutes, quality, max_gap, info):
 
         # Measure the effect of quality filtering on the entire data, that
         # is, before extraction of De Morton data. Only do this for vital
-        # data. This was added to reproduce legacy code (SanityChecker).
+        # data. This was added to reproduce legacy code (SanityChecker).
         measure_info(key=key, case=case, group="original", df=df, info=info)
         if "vital" in key:
             dfq = quality_filter_vital(df=df, quality=quality)

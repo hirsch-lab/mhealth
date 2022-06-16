@@ -10,7 +10,7 @@ PandasData = Union[pd.DataFrame, pd.Series]
 def ensure_dir(path: PathLike,
                exist_ok: bool=True) -> bool:
     """
-    Path.mkdir() usually raises if the folder cannot be created.
+    Path.mkdir() normally raises if the folder cannot be created.
     """
     path = Path(path)
     if not path.is_dir():
@@ -203,7 +203,6 @@ def write_hdf(df: PandasData,
 
 def read_hdf(path: PathLike,
              key: Optional[str]=None,
-             format: str="table",
              mode: str="r",
              **kwargs) -> pd.DataFrame:
     """
@@ -216,7 +215,7 @@ def read_hdf(path: PathLike,
     msg = "Inconsistent specification of storage key: %s, %s"
     assert not (annot and key) or annot==key, msg % (key, annot)
     key = key if key else annot
-    return pd.read_hdf(path, key=key, mode=mode, format=format, **kwargs)
+    return pd.read_hdf(path, key=key, mode=mode, **kwargs)
 
 
 class FileHelper:
