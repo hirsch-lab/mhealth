@@ -672,7 +672,7 @@ def visualize_bland_altman(data, masimo, col, out_dir,
         diff_std = diff.std()
         offset_ci = 1.96*diff_std
         offset_miss = diff.abs().max()*1.2
-        y_off = lambda x, offset: offset*np.ones_like(x)
+        y_off = lambda x, y: y*np.ones_like(x)
 
         # Info
         n_sensor = sensor.notna().sum()
@@ -696,13 +696,12 @@ def visualize_bland_altman(data, masimo, col, out_dir,
         else:
             h_valid = ax.scatter(avg, diff, c="black", alpha=0.2)
         xlim = ax.get_xlim()
-        h_mean, = ax.plot(xlim, diff_mean*np.ones(2), "b", zorder=100)
-        h_cip, = ax.plot(xlim, y_off(np.ones(2), +offset_ci), ":r", zorder=100)
-        h_cim, = ax.plot(xlim, y_off(np.ones(2), -offset_ci), ":r", zorder=100)
-        #h_tip, = ax.plot(xlim, y_off(np.ones(2), +DELTAS[col]), "r",
-        #                 zorder=100)
-        #h_tim, = ax.plot(xlim, y_off(np.ones(2), -DELTAS[col]), "r",
-        #                 zorder=100)
+        h_mean, = ax.plot(xlim, y_off(xlim, diff_mean), "b", zorder=100)
+        h_cip, = ax.plot(xlim, y_off(xlim, diff_mean+offset_ci), ":r", zorder=100)
+        h_cim, = ax.plot(xlim, y_off(xlim, diff_mean-offset_ci), ":r", zorder=100)
+        # h_ci, = ax.hlines([diff_mean+offset_ci, diff_mean-offset_ci],
+        #                  colors="r", linestyle="dotted",
+        #                  xmin=xlim[0], xmax=xlim[1], zorder=100)
         h_dummy, = plt.plot([avg.mean()],[0], color="w", alpha=0)
 
         ax.grid(True)
@@ -711,8 +710,7 @@ def visualize_bland_altman(data, masimo, col, out_dir,
         ax.set_xlabel("Mean: (Sensor+Masimo)/2")
         ax.set_ylabel("Difference: (Sensor-Masimo)")
         legend = [(h_mean,   "Mean: %.2f" % diff_mean),
-                  #(h_tim,    "Tol: ±%.2f" % (DELTAS[col])),
-                  (h_cim,    "95%% CI: ±%.2f" % (1.96*diff_std)),
+                  (h_cip,    "95%% CI: ±%.2f" % (1.96*diff_std)),
                   (h_dummy,  ""),
                   (h_valid,  "Patients")]
         leg = ax.legend(*zip(*legend),
